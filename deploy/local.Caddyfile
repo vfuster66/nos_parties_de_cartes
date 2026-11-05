@@ -1,0 +1,8 @@
+# Essai local du proxy SANS domaine ni certificat : HTTP simple sur un port local.
+# Ne valide ni Let's Encrypt ni un déploiement Internet (voir docs/ONLINE.md).
+{
+	auto_https off
+}
+:80 {
+	reverse_proxy game:3001
+}

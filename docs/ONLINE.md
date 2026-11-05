@@ -52,6 +52,8 @@ npm run dev:online     # serveur (127.0.0.1:3001) + client (http://localhost:517
 npm run dev:server     # serveur seul     |  npm run dev  # client seul (compteur uniquement)
 npm run test:run       # règles + serveur (Vitest)
 npm run test:e2e       # 4 navigateurs Playwright, viewport téléphone (serveur déterministe de test)
+npm run test:review    # revue visuelle Chromium + WebKit, 3 largeurs (captures dans test-results/review)
+npm run soak           # endurance (après build:server) : npm run soak -- --rooms 12 --minutes 10
 npm run typecheck && npm run lint && npm run format:check
 npm run build:all      # client (dist/) + serveur (server/dist/)
 ```
@@ -66,7 +68,7 @@ npm run build:all      # client (dist/) + serveur (server/dist/)
 ### Depuis un téléphone sur le même réseau
 
 1. Mac et téléphone sur le même Wi-Fi. Trouver l'IP du Mac : `ipconfig getifaddr en0`.
-2. `npm run dev:lan` (Vite en `--host`, serveur de jeu accepte les origines du réseau privé). Le serveur de jeu reste lié à 127.0.0.1 : seul Vite est exposé, et proxifie `/socket.io`.
+2. `npm run dev:lan` (Vite en `--host`, serveur de jeu accepte les origines du réseau privé ; testé : 4 joueurs en WebSocket via l'IP du Mac, port 3001 inaccessible depuis le réseau, origine externe refusée). Le serveur de jeu reste lié à 127.0.0.1 : seul Vite est exposé, et proxifie `/socket.io`.
 3. Sur le téléphone : `http://<IP-du-Mac>:5173`. À n'utiliser que sur un réseau de confiance ; ne jamais rediriger ce port vers Internet.
 
 ## Préparation VPS (rien n'est déployé)
@@ -75,10 +77,45 @@ Choix : **Docker Compose + Caddy** (HTTPS automatique, WebSocket, un seul fichie
 
 - `Dockerfile`, `deploy/docker-compose.yml`, `deploy/Caddyfile`. `DOMAIN` et `ALLOWED_ORIGINS` requis. `restart: unless-stopped`, arrêt propre (SIGTERM, 15 s), volume persistant `/data`, santé `GET /healthz` (`{"status":"ok"}`), rotation des logs (json-file 10 Mo × 5).
 - Client : construire avec `VITE_ONLINE_SERVER_URL=https://jeu.exemple.fr` (ou `same-origin` si servi par le même hôte) et `BASE_PATH` adapté ; ajouter l'origine du client dans `ALLOWED_ORIGINS`.
-- **Sauvegarde cohérente** (API de sauvegarde SQLite, sûre pendant les écritures) :
-  `docker compose -f deploy/docker-compose.yml exec game node server/dist/backup.mjs /data/backup-$(date +%F).sqlite` puis copier le fichier hors du serveur.
-- **Restauration** : `docker compose … stop game`, remplacer `/data/coinche.sqlite` par la sauvegarde, supprimer `/data/coinche.sqlite-wal` et `-shm`, `docker compose … start game`.
+- **Essai local de la pile sans domaine** (testé sur Docker Desktop, Mac) : Caddy en HTTP sur `127.0.0.1:18080`, volumes isolés par le nom de projet, base habituelle jamais touchée :
+  ```bash
+  export DOMAIN=localhost ALLOWED_ORIGINS=http://127.0.0.1:18080
+  C="-p coinche-local -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml"
+  docker compose $C build --no-cache game && docker compose $C up -d
+  curl http://127.0.0.1:18080/healthz          # {"status":"ok"}
+  docker compose $C down -v                    # nettoie l'essai (volumes de l'essai seulement)
+  ```
+  Cela valide l'image, le WebSocket derrière Caddy, les origines, les volumes, la recréation des conteneurs et l'arrêt propre. Cela **ne valide pas** un certificat public, Let's Encrypt, un DNS ni un pare-feu.
+- **Sauvegarde cohérente** (API de sauvegarde SQLite : inclut le contenu du journal WAL, sûre pendant les écritures) :
+  `docker compose -f deploy/docker-compose.yml exec game node server/dist/backup.mjs /data/backup-$(date +%F).sqlite`, puis `docker cp <conteneur>:/data/backup-….sqlite .` pour la sortir du serveur. Le fichier est en mode 600 (il contient des empreintes de jetons) : le chiffrer ou le stocker de façon privée.
+- **Restauration** — procédure testée (partie sauvegardée au milieu d'un pli, puis poursuivie, environnement arrêté, restauration dans un volume neuf, redémarrage, reconnexion des quatre clients : mains, phase, scores, identités identiques à l'instant de la sauvegarde) :
+  ```bash
+  docker volume create <projet>_coinche-data
+  docker run --rm --user node -v <projet>_coinche-data:/data -v "$PWD/sauvegardes":/in:ro \
+    --entrypoint sh <image-du-jeu> -c 'cp /in/backup-….sqlite /data/coinche.sqlite'
+  docker compose -p <projet> -f deploy/docker-compose.yml up -d     # aucun -wal/-shm à copier : la sauvegarde est autonome
+  ```
+  Ne jamais copier à chaud `coinche.sqlite` seul (le WAL contient des écritures récentes) : utiliser la commande de sauvegarde. Restaurer sur place (arrêter, remplacer le fichier, supprimer `-wal`/`-shm`) n'a pas été rejoué à part.
+- Droits : le processus tourne en utilisateur `node` (uid 1000, non root), `umask 077` ; `/data` en 700, fichiers de base et sauvegardes en 600. Aucun secret dans l'image (ni `.env`, ni base, ni jeton ; le jeu n'a aucun secret statique).
+- Derrière Caddy, `TRUST_PROXY=1` : l'adresse client vient de `X-Forwarded-For` posé par Caddy, qui **écrase** celui du client (vérifié : un en-tête usurpé ne contourne pas la limite de créations). Ne jamais publier le port 3001.
+
+## Vérifications automatiques réalisées (essai local)
+
+- **CI GitHub** : lint, format, TypeScript (client + serveur), Vitest, parcours Playwright à quatre navigateurs, build serveur, build de production.
+- **Vitest** : règles, scores (dont `allowFullPoints`), serveur. Le serveur est testé avec de vrais clients Socket.IO : confidentialité de tout ce qui est reçu (états, accusés, erreurs, reconnexion, historique), origines (WebSocket **et** polling HTTP, `Origin: null`), schémas et limites, déconnexions à chaque phase, redémarrage à chaque phase, échec d'écriture SQLite, remplacement de connexion.
+- **Endurance** (`npm run build:server && npm run soak -- --rooms 12 --minutes 10`) : vrai serveur en processus séparé, joueurs automatiques qui n'utilisent que les actions annoncées par le serveur, déconnexions/reprises aléatoires, fenêtres de surcoinche laissées expirer. Mesure effectuée sur un Mac, **sans extrapolation de capacité** : 12 salons simultanés (48 connexions), 10 min, 5 036 parties, 10 480 donnes, 433 480 commandes, 1 079 reprises après déconnexion : 0 erreur serveur, 0 anomalie de score, latence d'accusé p50 0,6 ms / p99 2,8 ms / max 191 ms, descripteurs stables, 0 connexion résiduelle à l'arrêt des clients. Une fuite a été trouvée (salons terminés conservés en mémoire : RSS 107 → 280 Mo) et corrigée ; ré-essai 5 min / 2 523 parties : RSS stable ≈ 100 Mo.
+- **Revue visuelle** (`npm run test:review`, captures dans `test-results/review/`) : Chromium et WebKit automatisé à 375, 390 et 1100 px, quatre contextes, pseudos de 20 caractères, hauteur réduite pour le clavier virtuel, commandes sortantes perdues pour vérifier qu'aucune carte n'est retirée sans validation du serveur et que l'écran ne reste pas bloqué. **WebKit automatisé ne remplace pas Safari sur un vrai iPhone.**
+
+## Limites connues acceptables pour un essai
+
+- Perte du jeton = perte de la place (pas de récupération). Seule issue : l'hôte ferme le salon et on recommence.
+- Une partie en cours dont les joueurs ne reviennent jamais reste indéfiniment en base (seules les parties terminées/abandonnées sont purgées : 30 j ; salons d'attente : 2 j).
+- Limites par adresse IP : derrière le proxy Vite du mode LAN, tous les téléphones partagent l'adresse 127.0.0.1 (20 créations de salon/h, 10 codes faux/10 min pour l'ensemble) — suffisant pour un essai.
+- Sans en-tête `Origin` (client non navigateur), la connexion est acceptée : seules les actions avec identité (jeton) sont possibles, et les limites s'appliquent.
+- Pseudos tronqués sur la table à 375 px (le nom complet du preneur reste affiché au-dessus).
+- Bannière « Rebelote ! » : reste affichée ~3,5 s, peut recouvrir un instant le dernier pli.
+- Le parcours de revue WebKit à 1100 px (premier test) s'est bloqué de façon intermittente dans le pilote d'automatisation (clic « S'asseoir » sans effet) ; non reproduit à 375/390 px ni sous Chromium, cause non établie.
 
 ## Points restant ouverts avant Internet
 
-Test de charge et durée ; récupération d'une place sans jeton ; association des résultats aux joueurs locaux ; revue de sécurité externe ; configuration CORS/origines réelle ; validation Docker sur un hôte Linux ; politique de rétention (purge actuelle : 30 j parties finies, 2 j salons d'attente) ; test sur vrais téléphones.
+Récupération d'une place sans jeton ; association des résultats aux joueurs locaux ; revue de sécurité externe ; domaine, DNS et certificat réels (Let's Encrypt non testé) ; validation Docker sur un hôte Linux (testé seulement sur Docker Desktop/Mac) ; test sur vrais téléphones (Safari iOS, Chrome Android) ; sauvegardes automatisées hors du serveur ; surveillance de l'espace disque.

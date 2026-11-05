@@ -16,7 +16,8 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
-    depends_on: [game]
+    depends_on:
+      game: { condition: service_healthy } # Caddy démarre quand /healthz répond
     ports: ['80:80', '443:443']
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

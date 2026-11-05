@@ -1,0 +1,9 @@
+# Surcharge d'ESSAI LOCAL du déploiement : Caddy en HTTP sur 127.0.0.1:18080, sans domaine.
+#   docker compose -p coinche-local -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml up -d --build
+# Volumes isolés par le nom de projet (-p coinche-local) : la base habituelle n'est jamais touchée.
+services:
+  caddy:
+    ports: !override ['127.0.0.1:18080:80']
+    volumes: !override
+      - ./local.Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data

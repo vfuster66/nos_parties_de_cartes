@@ -15,7 +15,16 @@ export default defineConfig({
     ...devices['Pixel 5'],
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'phone-chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { name: 'phone-chromium', use: { browserName: 'chromium' }, testIgnore: /review\.spec/ },
+    // Revue visuelle à la demande (npm run test:review) : Chromium et WebKit automatisé, plusieurs largeurs.
+    ...(process.env.REVIEW
+      ? [
+          { name: 'review-chromium', testMatch: /review\.spec/, use: { browserName: 'chromium' as const } },
+          { name: 'review-webkit', testMatch: /review\.spec/, use: { browserName: 'webkit' as const } },
+        ]
+      : []),
+  ],
   webServer: [
     {
       command: 'npx tsx e2e/server.ts',
