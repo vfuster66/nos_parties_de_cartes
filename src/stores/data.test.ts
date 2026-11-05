@@ -8,7 +8,14 @@ import { participations } from '../engine/stats'
 import { useData } from './data'
 
 const input = (takerId: string): CoincheInput => ({
-  takerId, takerTeam: 0, contract: 80, trump: 'pique', level: 'none', takerPoints: 100, allTricks: false, beloteTeam: null,
+  takerId,
+  takerTeam: 0,
+  contract: 80,
+  trump: 'pique',
+  level: 'none',
+  takerPoints: 100,
+  allTricks: false,
+  beloteTeam: null,
 })
 
 async function setup() {
@@ -45,8 +52,13 @@ describe('store et persistance', () => {
   it('parcours : partie, donne, reprise après rechargement, brouillon, annulation, export/import', async () => {
     const { d, a, b, c, e } = await setup()
     const g = await d.createGame({
-      kind: 'coinche', eveningId: null, teamA: [a.id, c.id], teamB: [b.id, e.id], teamNames: ['', ''],
-      firstDealerId: a.id, rules: defaultRules('coinche'),
+      kind: 'coinche',
+      eveningId: null,
+      teamA: [a.id, c.id],
+      teamB: [b.id, e.id],
+      teamNames: ['', ''],
+      firstDealerId: a.id,
+      rules: defaultRules('coinche'),
     })
     expect(g.playerIds).toEqual([a.id, b.id, c.id, e.id])
     expect(g.autoName).toBe('Coinche — Partie 1')
@@ -97,13 +109,29 @@ describe('store et persistance', () => {
   it('rejette les sauvegardes incohérentes', () => {
     expect(migrate({ app: 'autre' }).errors.length).toBeGreaterThan(0)
     expect(migrate({ app: 'nos-parties-de-cartes', schemaVersion: 99, data: {} }).errors[0]).toMatch(/plus récente/)
-    const bad = { app: 'nos-parties-de-cartes', schemaVersion: 1, data: { players: [], teams: [], evenings: [], games: [{ id: 'g', kind: 'coinche', status: 'finished', playerIds: ['x', 'x', 'y', 'z'], deals: [] }] } }
+    const bad = {
+      app: 'nos-parties-de-cartes',
+      schemaVersion: 1,
+      data: {
+        players: [],
+        teams: [],
+        evenings: [],
+        games: [{ id: 'g', kind: 'coinche', status: 'finished', playerIds: ['x', 'x', 'y', 'z'], deals: [] }],
+      },
+    }
     expect(migrate(bad).errors.length).toBeGreaterThan(0)
   })
 
   it('refuse de supprimer un joueur ayant des parties', async () => {
     const { d, a, b, c, e } = await setup()
-    await d.createGame({ kind: 'belote', eveningId: null, teamA: [a.id, c.id], teamB: [b.id, e.id], firstDealerId: a.id, rules: defaultRules('belote') })
+    await d.createGame({
+      kind: 'belote',
+      eveningId: null,
+      teamA: [a.id, c.id],
+      teamB: [b.id, e.id],
+      firstDealerId: a.id,
+      rules: defaultRules('belote'),
+    })
     await expect(d.deletePlayer(a.id)).rejects.toThrow()
   })
 })

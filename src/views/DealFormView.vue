@@ -47,13 +47,19 @@ function init() {
 init()
 
 let timer: number | undefined
-watch([form, dealerId], () => {
-  if (!loaded) return
-  window.clearTimeout(timer)
-  timer = window.setTimeout(() => {
-    void data.saveDraft(props.id, props.dealId ?? null, { form: form.value, dealerId: dealerId.value }).catch(() => undefined)
-  }, 400)
-}, { deep: true })
+watch(
+  [form, dealerId],
+  () => {
+    if (!loaded) return
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => {
+      void data
+        .saveDraft(props.id, props.dealId ?? null, { form: form.value, dealerId: dealerId.value })
+        .catch(() => undefined)
+    }, 400)
+  },
+  { deep: true },
+)
 onBeforeUnmount(() => window.clearTimeout(timer))
 
 const active = computed(() => (game.value ? activeFor(game.value, dealerId.value) : []))
@@ -64,7 +70,15 @@ const parsed = computed(() => {
   return tarotFromForm(form.value as TarotForm, active.value.length)
 })
 const candidate = computed<Deal | null>(() =>
-  parsed.value.input ? { id: existing.value?.id ?? 'preview', dealerId: dealerId.value, passed: false, input: parsed.value.input, createdAt: existing.value?.createdAt ?? '' } : null,
+  parsed.value.input
+    ? {
+        id: existing.value?.id ?? 'preview',
+        dealerId: dealerId.value,
+        passed: false,
+        input: parsed.value.input,
+        createdAt: existing.value?.createdAt ?? '',
+      }
+    : null,
 )
 const preview = computed(() => {
   const g = game.value
@@ -75,14 +89,20 @@ const preview = computed(() => {
   const rows = computeGame({ ...g, deals }).rows
   return rows[existing.value ? dealIndex.value : rows.length - 1]
 })
-const errors = computed(() => (parsed.value.errors.length ? parsed.value.errors : preview.value?.error ? [preview.value.error] : []))
+const errors = computed(() =>
+  parsed.value.errors.length ? parsed.value.errors : preview.value?.error ? [preview.value.error] : [],
+)
 
 async function save() {
   if (!candidate.value || errors.value.length || saving.value) return
   saving.value = true
   saveError.value = ''
   try {
-    const deal: Deal = { ...candidate.value, id: existing.value?.id ?? crypto.randomUUID(), createdAt: existing.value?.createdAt ?? new Date().toISOString() }
+    const deal: Deal = {
+      ...candidate.value,
+      id: existing.value?.id ?? crypto.randomUUID(),
+      createdAt: existing.value?.createdAt ?? new Date().toISOString(),
+    }
     await data.saveDeal(props.id, deal)
     await data.deleteDraft(props.id, props.dealId ?? null)
     await router.replace(`/partie/${props.id}`)
@@ -93,7 +113,13 @@ async function save() {
   }
 }
 async function discard() {
-  if (await askConfirm({ title: 'Effacer le brouillon ?', message: 'Les valeurs saisies seront perdues.', confirmLabel: 'Effacer' })) {
+  if (
+    await askConfirm({
+      title: 'Effacer le brouillon ?',
+      message: 'Les valeurs saisies seront perdues.',
+      confirmLabel: 'Effacer',
+    })
+  ) {
     window.clearTimeout(timer)
     await data.deleteDraft(props.id, props.dealId ?? null).catch(() => undefined)
     await router.replace(`/partie/${props.id}`)
@@ -103,15 +129,23 @@ async function discard() {
 
 <template>
   <template v-if="game && (!dealId || existing)">
-    <PageHeader :title="existing ? `Modifier la donne ${dealIndex + 1}` : 'Nouvelle donne'" :back="`/partie/${id}`" back-label="Tableau des scores" />
+    <PageHeader
+      :title="existing ? `Modifier la donne ${dealIndex + 1}` : 'Nouvelle donne'"
+      :back="`/partie/${id}`"
+      back-label="Tableau des scores"
+    />
     <p v-if="draftRestored" class="ok mb-3">Brouillon restauré : vous reprenez votre saisie.</p>
-    <p v-if="existing" class="note mb-3">Après validation, toutes les donnes suivantes (scores, réserves, résultat, statistiques) seront recalculées.</p>
+    <p v-if="existing" class="note mb-3">
+      Après validation, toutes les donnes suivantes (scores, réserves, résultat, statistiques) seront recalculées.
+    </p>
     <form class="flex flex-col gap-4" @submit.prevent="save">
       <PlayerSelect v-model="dealerId" label="Donneur de cette donne" :ids="game.playerIds" />
-      <p v-if="game.playerIds.length === 6" class="note">Le donneur est au repos : il ne peut être ni preneur, ni appelé, ni bénéficiaire de prime.</p>
-      <CoincheFields v-if="game.kind === 'coinche'" v-model="(form as CoincheForm)" :game="game" />
-      <BeloteFields v-else-if="game.kind === 'belote'" v-model="(form as BeloteForm)" :game="game" />
-      <TarotFields v-else v-model="(form as TarotForm)" :active="active" />
+      <p v-if="game.playerIds.length === 6" class="note">
+        Le donneur est au repos : il ne peut être ni preneur, ni appelé, ni bénéficiaire de prime.
+      </p>
+      <CoincheFields v-if="game.kind === 'coinche'" v-model="form as CoincheForm" :game="game" />
+      <BeloteFields v-else-if="game.kind === 'belote'" v-model="form as BeloteForm" :game="game" />
+      <TarotFields v-else v-model="form as TarotForm" :active="active" />
 
       <section class="card" aria-labelledby="prev-h" aria-live="polite">
         <h2 id="prev-h" class="mb-2 text-xl font-bold">Aperçu du calcul</h2>
@@ -121,7 +155,9 @@ async function discard() {
       </section>
 
       <p v-if="saveError" class="err" role="alert">{{ saveError }}</p>
-      <button class="btn btn-primary !min-h-14 text-xl" :disabled="!!errors.length || !candidate || saving">{{ existing ? 'Enregistrer la correction' : 'Valider la donne' }}</button>
+      <button class="btn btn-primary !min-h-14 text-xl" :disabled="!!errors.length || !candidate || saving">
+        {{ existing ? 'Enregistrer la correction' : 'Valider la donne' }}
+      </button>
       <button type="button" class="btn" @click="discard">Effacer le brouillon et quitter</button>
     </form>
   </template>

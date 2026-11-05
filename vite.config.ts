@@ -20,9 +20,7 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#f8fafc',
         theme_color: '#0f766e',
-        icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
-        ],
+        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
       },
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'], navigateFallback: 'index.html' },
     }),

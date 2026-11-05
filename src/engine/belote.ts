@@ -60,7 +60,12 @@ export function validateBeloteInput(i: BeloteInput, rules: BeloteRules): string[
       const n = c[t] ?? 0
       if (!Number.isInteger(n) || n < 0 || n > 4) errors.push('Nombre d’annonces invalide.')
     }
-  if (rules.announcements && announceCount(i.announcements[0]) > 0 && announceCount(i.announcements[1]) > 0 && i.strongest == null)
+  if (
+    rules.announcements &&
+    announceCount(i.announcements[0]) > 0 &&
+    announceCount(i.announcements[1]) > 0 &&
+    i.strongest == null
+  )
     errors.push('Les deux équipes ont des annonces : indiquez quelle équipe a la plus forte (ou égalité).')
   return errors
 }
@@ -104,13 +109,26 @@ export function scoreBelote(input: BeloteInput, rules: BeloteRules): TeamDealDet
 
   if (rules.announcements) {
     const decl = [announcePoints(input.announcements[0]), announcePoints(input.announcements[1])]
-    if (announceCount(input.announcements[0]) + announceCount(input.announcements[1]) === 0) steps.push('Aucune annonce.')
+    if (announceCount(input.announcements[0]) + announceCount(input.announcements[1]) === 0)
+      steps.push('Aucune annonce.')
     else if (validTeam != null)
-      steps.push(`Plus forte annonce : ${label(validTeam)}. Annonces validées : ${ann[validTeam]} pts (annonces de l'autre équipe éliminées).`)
-    else steps.push(`Égalité des plus fortes annonces : toutes les annonces s'annulent (déclarées ${decl[0]} / ${decl[1]}).`)
+      steps.push(
+        `Plus forte annonce : ${label(validTeam)}. Annonces validées : ${ann[validTeam]} pts (annonces de l'autre équipe éliminées).`,
+      )
+    else
+      steps.push(
+        `Égalité des plus fortes annonces : toutes les annonces s'annulent (déclarées ${decl[0]} / ${decl[1]}).`,
+      )
   }
-  if (input.beloteTeam != null) steps.push(`Belote-rebelote : ${label(input.beloteTeam)} (+${BELOTE_POINTS}), indépendante de la sélection des annonces.`)
-  steps.push(exactMode ? 'Mode points réels : aucun arrondi.' : 'Mode arrondi : plis arrondis à la dizaine (5 vers le haut) avant d’ajouter annonces et belote.')
+  if (input.beloteTeam != null)
+    steps.push(
+      `Belote-rebelote : ${label(input.beloteTeam)} (+${BELOTE_POINTS}), indépendante de la sélection des annonces.`,
+    )
+  steps.push(
+    exactMode
+      ? 'Mode points réels : aucun arrondi.'
+      : 'Mode arrondi : plis arrondis à la dizaine (5 vers le haut) avant d’ajouter annonces et belote.',
+  )
 
   const retained: [number, number] = [keep(exact[0]), keep(exact[1])]
   const totalExact: [number, number] = [exact[0] + ann[0] + belote[0], exact[1] + ann[1] + belote[1]]
@@ -126,7 +144,9 @@ export function scoreBelote(input: BeloteInput, rules: BeloteRules): TeamDealDet
     score[c] = CAPOT_POINTS + ann[c] + belote[c]
     score[other(c)] = ann[other(c)] + belote[other(c)]
     retained[0] = retained[1] = 0
-    steps.push(`Capot de ${label(c)} : ${CAPOT_POINTS} points. Chaque équipe conserve ses annonces validées et sa belote.`)
+    steps.push(
+      `Capot de ${label(c)} : ${CAPOT_POINTS} points. Chaque équipe conserve ses annonces validées et sa belote.`,
+    )
   } else {
     steps.push(`Totaux exacts (plis + annonces + belote) : preneurs ${totalExact[t]}, défense ${totalExact[d]}.`)
     if (totalExact[t] > totalExact[d]) {
@@ -142,7 +162,9 @@ export function scoreBelote(input: BeloteInput, rules: BeloteRules): TeamDealDet
       const allBel = belote[0] + belote[1]
       score[t] = 0
       score[d] = base + allAnn + allBel
-      steps.push(`Chute : la défense reçoit la base ${base} + annonces validées ${allAnn} + belote ${allBel} (même celle des preneurs) = ${score[d]}. Preneurs : 0.`)
+      steps.push(
+        `Chute : la défense reçoit la base ${base} + annonces validées ${allAnn} + belote ${allBel} (même celle des preneurs) = ${score[d]}. Preneurs : 0.`,
+      )
     } else {
       outcome = 'litige'
       winner = null
@@ -164,7 +186,15 @@ export function scoreBelote(input: BeloteInput, rules: BeloteRules): TeamDealDet
     exactTotal: totalExact[x],
     score: score[x],
   })
-  return { outcome, winnerTeam: winner, multiplier: 1, teams: [bd(0), bd(1)], delta: score, reserveCreated: reserve, steps }
+  return {
+    outcome,
+    winnerTeam: winner,
+    multiplier: 1,
+    teams: [bd(0), bd(1)],
+    delta: score,
+    reserveCreated: reserve,
+    steps,
+  }
 }
 
 export type { ReserveItem }

@@ -5,7 +5,7 @@ import ErrorList from '../components/ErrorList.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PlayerSelect from '../components/PlayerSelect.vue'
 import RulesEditor from '../components/RulesEditor.vue'
-import Seg from '../components/Seg.vue'
+import SegmentedChoice from '../components/SegmentedChoice.vue'
 import { entityPlayerIds, nextAfter } from '../engine/game'
 import { GAME_LABELS } from '../engine/types'
 import type { GameKind, Rules } from '../engine/types'
@@ -36,7 +36,10 @@ if (rematch) {
   else {
     teamA.value = entityPlayerIds(rematch, 0) as [string, string]
     teamB.value = entityPlayerIds(rematch, 1) as [string, string]
-    teamNames.value = [rematch.teamIds ? (data.team(rematch.teamIds[0])?.name ?? '') : '', rematch.teamIds ? (data.team(rematch.teamIds[1])?.name ?? '') : '']
+    teamNames.value = [
+      rematch.teamIds ? (data.team(rematch.teamIds[0])?.name ?? '') : '',
+      rematch.teamIds ? (data.team(rematch.teamIds[1])?.name ?? '') : '',
+    ]
   }
   firstDealer.value = nextAfter(rematch, rematch.deals.at(-1)?.dealerId ?? rematch.firstDealerId)
 }
@@ -67,7 +70,9 @@ const errors = computed(() => {
   return e
 })
 const existingTeams = computed(() =>
-  kind.value === 'tarot' ? [] : [teamA.value, teamB.value].map((t) => (t[0] && t[1] ? data.findTeam(t[0], t[1]) : undefined)),
+  kind.value === 'tarot'
+    ? []
+    : [teamA.value, teamB.value].map((t) => (t[0] && t[1] ? data.findTeam(t[0], t[1]) : undefined)),
 )
 
 async function quickAdd() {
@@ -90,9 +95,15 @@ async function start() {
     let ev: string | null = eveningId.value && eveningId.value !== '__new' ? eveningId.value : null
     if (eveningId.value === '__new') ev = (await data.addEvening(newEvening.name, newEvening.date)).id
     const g = await data.createGame({
-      kind: kind.value, name: name.value, eveningId: ev,
-      teamA: teamA.value, teamB: teamB.value, teamNames: teamNames.value,
-      tarotPlayers: tableOrder.value, firstDealerId: firstDealer.value, rules: rules.value,
+      kind: kind.value,
+      name: name.value,
+      eveningId: ev,
+      teamA: teamA.value,
+      teamB: teamB.value,
+      teamNames: teamNames.value,
+      tarotPlayers: tableOrder.value,
+      firstDealerId: firstDealer.value,
+      rules: rules.value,
     })
     await router.replace(`/partie/${g.id}`)
   } catch (e) {
@@ -104,14 +115,19 @@ async function start() {
 </script>
 
 <template>
-  <PageHeader :title="rematch ? 'Revanche' : 'Nouvelle partie'" back="/" backLabel="Accueil" />
+  <PageHeader :title="rematch ? 'Revanche' : 'Nouvelle partie'" back="/" back-label="Accueil" />
   <form class="flex flex-col gap-4" novalidate @submit.prevent="start">
-    <Seg
-      v-if="!rematch" :model-value="kind" label="Jeu"
+    <SegmentedChoice
+      v-if="!rematch"
+      :model-value="kind"
+      label="Jeu"
       :options="(Object.keys(GAME_LABELS) as GameKind[]).map((k) => ({ value: k, label: GAME_LABELS[k] }))"
       @update:model-value="changeKind"
     />
-    <p v-else class="ok">Revanche de la partie « {{ rematch.name || rematch.autoName }} » : mêmes joueurs et mêmes règles, modifiables ci-dessous.</p>
+    <p v-else class="ok">
+      Revanche de la partie « {{ rematch.name || rematch.autoName }} » : mêmes joueurs et mêmes règles, modifiables
+      ci-dessous.
+    </p>
 
     <div>
       <label class="label" for="g-name">Nom de la partie (facultatif)</label>
@@ -136,11 +152,25 @@ async function start() {
     <section class="card flex flex-col gap-3" aria-labelledby="pl-h">
       <h2 id="pl-h" class="text-xl font-bold">Joueurs</h2>
       <template v-if="kind !== 'tarot'">
-        <fieldset v-for="(t, ti) in [teamA, teamB]" :key="ti" class="flex flex-col gap-2 rounded-xl border-2 border-slate-300 p-3">
+        <fieldset
+          v-for="(t, ti) in [teamA, teamB]"
+          :key="ti"
+          class="flex flex-col gap-2 rounded-xl border-2 border-slate-300 p-3"
+        >
           <legend class="px-1 font-bold">Équipe {{ ti ? 'B' : 'A' }}</legend>
-          <PlayerSelect v-model="t[0]" :label="`Équipe ${ti ? 'B' : 'A'} — joueur 1`" :exclude="chosen.filter((p) => p !== t[0])" />
-          <PlayerSelect v-model="t[1]" :label="`Équipe ${ti ? 'B' : 'A'} — joueur 2`" :exclude="chosen.filter((p) => p !== t[1])" />
-          <p v-if="existingTeams[ti]" class="ok">Équipe déjà connue : {{ data.teamName(existingTeams[ti]!.id) }}. Son historique sera conservé.</p>
+          <PlayerSelect
+            v-model="t[0]"
+            :label="`Équipe ${ti ? 'B' : 'A'} — joueur 1`"
+            :exclude="chosen.filter((p) => p !== t[0])"
+          />
+          <PlayerSelect
+            v-model="t[1]"
+            :label="`Équipe ${ti ? 'B' : 'A'} — joueur 2`"
+            :exclude="chosen.filter((p) => p !== t[1])"
+          />
+          <p v-if="existingTeams[ti]" class="ok">
+            Équipe déjà connue : {{ data.teamName(existingTeams[ti]!.id) }}. Son historique sera conservé.
+          </p>
           <div>
             <label class="label" :for="`tn-${ti}`">Nom de l’équipe (facultatif)</label>
             <input :id="`tn-${ti}`" v-model="teamNames[ti]" class="input" placeholder="Ex. Les As" />
@@ -149,10 +179,19 @@ async function start() {
         <p class="muted">Ordre autour de la table : A1, B1, A2, B2 (les équipes alternent).</p>
       </template>
       <template v-else>
-        <Seg v-model="tarotCount" label="Nombre de joueurs inscrits" :options="[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))" />
-        <p v-if="tarotCount === 6" class="note">À six, cinq jouent et le donneur est au repos (il marque 0 et tourne à chaque donne).</p>
+        <SegmentedChoice
+          v-model="tarotCount"
+          label="Nombre de joueurs inscrits"
+          :options="[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))"
+        />
+        <p v-if="tarotCount === 6" class="note">
+          À six, cinq jouent et le donneur est au repos (il marque 0 et tourne à chaque donne).
+        </p>
         <PlayerSelect
-          v-for="i in tarotCount" :key="i" v-model="tarotPlayers[i - 1]" :label="`Joueur ${i} (ordre autour de la table)`"
+          v-for="i in tarotCount"
+          :key="i"
+          v-model="tarotPlayers[i - 1]"
+          :label="`Joueur ${i} (ordre autour de la table)`"
           :exclude="chosen.filter((p) => p !== tarotPlayers[i - 1])"
         />
       </template>
@@ -160,10 +199,20 @@ async function start() {
       <div class="rounded-xl border-2 border-dashed border-slate-400 p-3">
         <label class="label" for="qa">Nouveau joueur</label>
         <div class="flex gap-2">
-          <input id="qa" v-model="quickName" class="input" placeholder="Nom ou pseudo" @keydown.enter.prevent="quickAdd" />
-          <button type="button" class="btn btn-primary shrink-0" :disabled="!quickName.trim()" @click="quickAdd">Ajouter</button>
+          <input
+            id="qa"
+            v-model="quickName"
+            class="input"
+            placeholder="Nom ou pseudo"
+            @keydown.enter.prevent="quickAdd"
+          />
+          <button type="button" class="btn btn-primary shrink-0" :disabled="!quickName.trim()" @click="quickAdd">
+            Ajouter
+          </button>
         </div>
-        <p v-if="duplicates.length" class="note mt-2">Un joueur nommé « {{ duplicates[0].name }} » existe déjà. Vous pouvez quand même ajouter un homonyme.</p>
+        <p v-if="duplicates.length" class="note mt-2">
+          Un joueur nommé « {{ duplicates[0].name }} » existe déjà. Vous pouvez quand même ajouter un homonyme.
+        </p>
       </div>
     </section>
 
@@ -171,7 +220,9 @@ async function start() {
 
     <details class="card">
       <summary class="cursor-pointer text-lg font-bold">Règles de cette partie</summary>
-      <p class="muted my-2">Copiées depuis vos préférences ; elles ne changeront plus si vous modifiez les préférences plus tard.</p>
+      <p class="muted my-2">
+        Copiées depuis vos préférences ; elles ne changeront plus si vous modifiez les préférences plus tard.
+      </p>
       <RulesEditor v-model="rules" />
     </details>
 
