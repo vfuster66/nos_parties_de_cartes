@@ -13,6 +13,16 @@ const ta = computed(() => props.row.tarotDetail)
 const outcome = { success: 'Réussite', fail: 'Chute', litige: 'Litige', capot: 'Capot' }
 const teamTitle = (i: number) => data.gameTeamName(props.game, i as 0 | 1)
 const isBelote = computed(() => props.game.kind === 'belote')
+function rowsOf(d: NonNullable<typeof t.value>) {
+  const rows: { label: string; values: (string | number)[]; strong?: boolean }[] = [
+    { label: 'Plis exacts', values: d.teams.map((x) => (d.outcome === 'capot' && isBelote.value ? '—' : x.exactPlis)) },
+    { label: 'Plis retenus', values: d.teams.map((x) => x.retainedPlis) },
+  ]
+  if (isBelote.value) rows.push({ label: 'Annonces', values: d.teams.map((x) => x.annonces) })
+  rows.push({ label: 'Belote', values: d.teams.map((x) => x.belote) })
+  rows.push({ label: 'Score', values: d.teams.map((x) => x.score), strong: true })
+  return rows
+}
 </script>
 
 <template>
@@ -23,29 +33,23 @@ const isBelote = computed(() => props.game.kind === 'belote')
         <span v-if="game.kind === 'coinche' && t.multiplier > 1"> · multiplicateur ×{{ t.multiplier }}</span>
       </p>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-base">
+        <table class="w-full table-fixed text-left text-base">
           <caption class="sr-only">
             Détail par équipe
           </caption>
           <thead>
             <tr class="border-b-2 border-slate-300">
-              <th scope="col" class="py-1">Équipe</th>
-              <th scope="col">Plis exacts</th>
-              <th scope="col">Plis retenus</th>
-              <th v-if="isBelote" scope="col">Annonces</th>
-              <th scope="col">Belote</th>
-              <th scope="col">Score</th>
+              <td class="w-[34%] py-1"></td>
+              <th v-for="(_, i) in t.teams" :key="i" scope="col" class="px-1 py-1 align-bottom break-words">
+                {{ teamTitle(i) }}
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(x, i) in t.teams" :key="i" class="border-b border-slate-200">
-              <th scope="row" class="py-1 pr-2">{{ teamTitle(i) }}</th>
-              <td>{{ t.outcome === 'capot' && game.kind === 'belote' ? '—' : x.exactPlis }}</td>
-              <td>{{ x.retainedPlis }}</td>
-              <td v-if="isBelote">{{ x.annonces }}</td>
-              <td>{{ x.belote }}</td>
-              <td>
-                <strong>{{ x.score }}</strong>
+            <tr v-for="r in rowsOf(t)" :key="r.label" class="border-b border-slate-200">
+              <th scope="row" class="py-2 pr-1 font-normal">{{ r.label }}</th>
+              <td v-for="(v, i) in r.values" :key="i" class="px-1" :class="r.strong ? 'text-xl font-bold' : ''">
+                {{ v }}
               </td>
             </tr>
           </tbody>
