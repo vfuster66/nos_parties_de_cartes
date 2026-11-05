@@ -19,6 +19,9 @@ export default createRouter({
     { path: '/equipe/:id', component: () => import('../views/TeamView.vue'), props: true },
     { path: '/classements', component: () => import('../views/RankingsView.vue') },
     { path: '/parametres', component: () => import('../views/SettingsView.vue') },
+    { path: '/en-ligne', component: () => import('../views/OnlineHomeView.vue') },
+    { path: '/en-ligne/rejoindre/:code', component: () => import('../views/OnlineHomeView.vue'), props: true },
+    { path: '/en-ligne/salon/:roomId', component: () => import('../views/OnlineRoomView.vue'), props: true },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

@@ -31,8 +31,26 @@ describe('paquet', () => {
 describe('valeurs', () => {
   it("points à l'atout et hors atout", () => {
     const p = (rank: Card['rank'], suit: Suit) => cardPoints({ rank, suit }, 'coeur')
-    expect([p('V', 'coeur'), p('9', 'coeur'), p('A', 'coeur'), p('10', 'coeur'), p('R', 'coeur'), p('D', 'coeur'), p('8', 'coeur'), p('7', 'coeur')]).toEqual([20, 14, 11, 10, 4, 3, 0, 0])
-    expect([p('V', 'pique'), p('9', 'pique'), p('A', 'pique'), p('10', 'pique'), p('R', 'pique'), p('D', 'pique'), p('8', 'pique'), p('7', 'pique')]).toEqual([2, 0, 11, 10, 4, 3, 0, 0])
+    expect([
+      p('V', 'coeur'),
+      p('9', 'coeur'),
+      p('A', 'coeur'),
+      p('10', 'coeur'),
+      p('R', 'coeur'),
+      p('D', 'coeur'),
+      p('8', 'coeur'),
+      p('7', 'coeur'),
+    ]).toEqual([20, 14, 11, 10, 4, 3, 0, 0])
+    expect([
+      p('V', 'pique'),
+      p('9', 'pique'),
+      p('A', 'pique'),
+      p('10', 'pique'),
+      p('R', 'pique'),
+      p('D', 'pique'),
+      p('8', 'pique'),
+      p('7', 'pique'),
+    ]).toEqual([2, 0, 11, 10, 4, 3, 0, 0])
   })
   it("ordre à l'atout : V > 9 > A > 10 > R > D > 8 > 7", () => {
     const order = ['V', '9', 'A', '10', 'R', 'D', '8', '7'] as const
@@ -45,14 +63,23 @@ describe('valeurs', () => {
       expect(trickWinner([t(0, order[i + 1], 'pique'), t(1, order[i], 'pique')], 'coeur')).toBe(1)
   })
   it("l'atout coupe ; une défausse ne gagne jamais ; le plus fort atout l'emporte", () => {
-    expect(trickWinner([t(0, 'A', 'pique'), t(1, '7', 'coeur'), t(2, 'A', 'carreau'), t(3, '8', 'coeur')], 'coeur')).toBe(3)
-    expect(trickWinner([t(0, '7', 'pique'), t(1, 'A', 'carreau'), t(2, '8', 'pique'), t(3, 'A', 'trefle')], 'coeur')).toBe(2)
+    expect(
+      trickWinner([t(0, 'A', 'pique'), t(1, '7', 'coeur'), t(2, 'A', 'carreau'), t(3, '8', 'coeur')], 'coeur'),
+    ).toBe(3)
+    expect(
+      trickWinner([t(0, '7', 'pique'), t(1, 'A', 'carreau'), t(2, '8', 'pique'), t(3, 'A', 'trefle')], 'coeur'),
+    ).toBe(2)
   })
   it('points d’un pli', () => {
-    expect(trickPoints([t(0, 'V', 'coeur'), t(1, 'A', 'pique'), t(2, '10', 'pique'), t(3, 'D', 'trefle')], 'coeur')).toBe(20 + 11 + 10 + 3)
+    expect(
+      trickPoints([t(0, 'V', 'coeur'), t(1, 'A', 'pique'), t(2, '10', 'pique'), t(3, 'D', 'trefle')], 'coeur'),
+    ).toBe(20 + 11 + 10 + 3)
   })
   it("tri d'affichage : atout d'abord, plus fort à gauche", () => {
-    const hand = sortHand([t(0, '7', 'pique').card, t(0, 'V', 'coeur').card, t(0, '9', 'coeur').card, t(0, 'A', 'pique').card], 'coeur')
+    const hand = sortHand(
+      [t(0, '7', 'pique').card, t(0, 'V', 'coeur').card, t(0, '9', 'coeur').card, t(0, 'A', 'pique').card],
+      'coeur',
+    )
     expect(hand.map(cardKey)).toEqual(['coeur:V', 'coeur:9', 'pique:A', 'pique:7'])
   })
 })

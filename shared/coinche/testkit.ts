@@ -19,11 +19,21 @@ export function seededRandomInt(seed: number): (n: number) => number {
 }
 
 export const PIDS = ['p0', 'p1', 'p2', 'p3']
-export const ctx = (over: Partial<Ctx> = {}): Ctx => ({ now: 1_000_000, paused: false, randomInt: seededRandomInt(1), ...over })
+export const ctx = (over: Partial<Ctx> = {}): Ctx => ({
+  now: 1_000_000,
+  paused: false,
+  randomInt: seededRandomInt(1),
+  ...over,
+})
 
 let n = 0
 /** Applique une commande en visant automatiquement la version courante. */
-export function act(s: MatchState, pid: string, cmd: { type: Command['type'] } & Record<string, unknown>, c: Ctx = ctx()): MatchState {
+export function act(
+  s: MatchState,
+  pid: string,
+  cmd: { type: Command['type'] } & Record<string, unknown>,
+  c: Ctx = ctx(),
+): MatchState {
   return applyCommand(s, pid, { commandId: `c${++n}`, expectedVersion: s.version, ...cmd } as Command, c)
 }
 

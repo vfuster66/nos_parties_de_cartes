@@ -12,7 +12,13 @@ export const cleanText = (max: number) =>
   z
     .string()
     .max(max * 4)
-    .transform((s) => s.normalize('NFC').replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '').replace(/\s+/g, ' ').trim())
+    .transform((s) =>
+      s
+        .normalize('NFC')
+        .replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
     .refine((s) => [...s].length >= 1 && [...s].length <= max, { message: `1 à ${max} caractères` })
 
 export const nicknameSchema = cleanText(20)

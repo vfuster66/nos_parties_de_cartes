@@ -27,6 +27,10 @@ npm run preview    # sert dist/ (nécessaire pour tester le mode hors connexion)
 
 Les scores, réserves, résultats et statistiques ne sont **jamais stockés** : ils sont recalculés à partir des donnes. Une correction, une suppression ou une réouverture met donc tout à jour sans compteur qui diverge.
 
+## Coinche en ligne (en développement)
+
+Coinche à quatre à distance, en salon privé : voir [docs/ONLINE.md](docs/ONLINE.md). Non déployée ; invisible sur GitHub Pages tant qu'aucun serveur n'est configuré. `npm run dev:online` pour l'essayer en local.
+
 ## Règles et ordre des calculs
 
 Voir [docs/REGLES.md](docs/REGLES.md).

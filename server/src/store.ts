@@ -59,7 +59,9 @@ export class Store {
   }
 
   loadActive(): MatchState[] {
-    const rows = this.db.prepare("SELECT state FROM rooms WHERE status IN ('lobby','playing')").all() as { state: string }[]
+    const rows = this.db.prepare("SELECT state FROM rooms WHERE status IN ('lobby','playing')").all() as {
+      state: string
+    }[]
     return rows.map((r) => JSON.parse(r.state) as MatchState)
   }
 

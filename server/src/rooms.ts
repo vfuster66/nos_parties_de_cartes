@@ -212,7 +212,12 @@ export class RoomManager {
     const now = this.d.now()
     const pid = randomUUID()
     const token = this.newToken()
-    const state = newMatch(randomBytes(16).toString('base64url'), this.genCode(), { id: pid, nickname: p.data.nickname, joinedAt: now }, now)
+    const state = newMatch(
+      randomBytes(16).toString('base64url'),
+      this.genCode(),
+      { id: pid, nickname: p.data.nickname, joinedAt: now },
+      now,
+    )
     this.d.store.db.transaction(() => {
       this.d.store.insertRoom(state, now)
       this.d.store.setToken(state.id, pid, token)
@@ -227,7 +232,8 @@ export class RoomManager {
 
   join(socket: Sock, payload: unknown): Ack<{ grant: SessionGrant }> {
     const key = this.clientKey(socket)
-    if (this.lookupFailures.isBlocked(key)) return fail('rate_limited', 'Trop de tentatives. Patientez quelques minutes.')
+    if (this.lookupFailures.isBlocked(key))
+      return fail('rate_limited', 'Trop de tentatives. Patientez quelques minutes.')
     const p = joinRoomSchema.safeParse(payload)
     if (!p.success) return fail('invalid', 'Code ou pseudo invalide.')
     const roomId = this.byCode.get(normalizeCode(p.data.code))
@@ -256,14 +262,18 @@ export class RoomManager {
 
   resume(socket: Sock, payload: unknown): Ack<{ version: number }> {
     const key = this.clientKey(socket)
-    if (this.lookupFailures.isBlocked(key)) return fail('rate_limited', 'Trop de tentatives. Patientez quelques minutes.')
+    if (this.lookupFailures.isBlocked(key))
+      return fail('rate_limited', 'Trop de tentatives. Patientez quelques minutes.')
     const p = resumeSchema.safeParse(payload)
     if (!p.success) return fail('invalid', 'Session invalide.')
     const room = this.getRoom(p.data.roomId)
     const ok = room && this.d.store.verifyToken(p.data.roomId, p.data.participantId, p.data.token)
     if (!room || !ok || !room.state.participants.some((x) => x.id === p.data.participantId)) {
       this.lookupFailures.record(key)
-      return fail('unauthorized', "Impossible de reprendre cette place. Le secret de reconnexion de cet appareil est absent ou invalide.")
+      return fail(
+        'unauthorized',
+        'Impossible de reprendre cette place. Le secret de reconnexion de cet appareil est absent ou invalide.',
+      )
     }
     this.attach(room, p.data.participantId, socket)
     return { ok: true, version: room.state.version }
@@ -348,7 +358,12 @@ export class RoomManager {
     const removed = this.d.store.purge(this.d.now(), 30 * DAY, 2 * DAY)
     for (const [id, room] of this.rooms) {
       const st = room.state
-      if (room.sockets.size === 0 && (st.status === 'finished' || st.status === 'abandoned' || (st.status === 'lobby' && this.d.store.loadRoom(id) === null))) {
+      if (
+        room.sockets.size === 0 &&
+        (st.status === 'finished' ||
+          st.status === 'abandoned' ||
+          (st.status === 'lobby' && this.d.store.loadRoom(id) === null))
+      ) {
         if (room.timer) clearTimeout(room.timer)
         this.rooms.delete(id)
         this.byCode.delete(st.code)

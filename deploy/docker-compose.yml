@@ -1,0 +1,28 @@
+# Déploiement ultérieur sur un petit VPS Linux (NON déployé à ce jour).
+# Lancer depuis la racine du dépôt : docker compose -f deploy/docker-compose.yml up -d --build
+services:
+  game:
+    build: ..
+    restart: unless-stopped
+    stop_grace_period: 15s # SIGTERM : parties mises en pause et sauvegardées avant l'arrêt
+    environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ex. https://jeu.exemple.fr}
+    volumes:
+      - coinche-data:/data
+    expose: ['3001'] # jamais publié directement : seul Caddy est exposé
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' } # rotation des logs
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [game]
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    environment:
+      DOMAIN: ${DOMAIN:?ex. jeu.exemple.fr}
+volumes:
+  coinche-data:
+  caddy-data:

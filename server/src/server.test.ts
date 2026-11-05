@@ -30,7 +30,13 @@ class Client {
   }
   /** Envoie une commande visant la version que ce client a vue. */
   cmd(type: string, extra: Record<string, unknown> = {}, over: Record<string, unknown> = {}): Promise<Ack> {
-    return this.call('command', { type, commandId: `${this.name}-${++this.nextId}`, expectedVersion: this.view?.version, ...extra, ...over })
+    return this.call('command', {
+      type,
+      commandId: `${this.name}-${++this.nextId}`,
+      expectedVersion: this.view?.version,
+      ...extra,
+      ...over,
+    })
   }
   async waitFor(pred: (v: RoomView) => boolean, ms = 3000): Promise<RoomView> {
     const t0 = Date.now()
@@ -38,7 +44,9 @@ class Client {
       if (this.view && pred(this.view)) return this.view
       await new Promise((r) => setTimeout(r, 10))
     }
-    throw new Error(`${this.name} : condition non atteinte. Vue : ${JSON.stringify(this.view?.pause)} v${this.view?.version}`)
+    throw new Error(
+      `${this.name} : condition non atteinte. Vue : ${JSON.stringify(this.view?.pause)} v${this.view?.version}`,
+    )
   }
 }
 
@@ -64,7 +72,11 @@ async function boot(over: { dbPath?: string; now?: () => number; env?: NodeJS.Pr
   }
   cleanup.push(close, () => rmSync(dir, { recursive: true, force: true }))
   const open = async (name: string, headers: Record<string, string> = {}) => {
-    const socket = connect(`http://127.0.0.1:${port}`, { transports: ['websocket'], reconnection: false, extraHeaders: headers })
+    const socket = connect(`http://127.0.0.1:${port}`, {
+      transports: ['websocket'],
+      reconnection: false,
+      extraHeaders: headers,
+    })
     await new Promise<void>((res, rej) => {
       socket.once('connect', () => res())
       socket.once('connect_error', rej)
@@ -147,8 +159,16 @@ describe('serveur : salon, identité et confidentialité', () => {
     // Avec le pseudo seul : rejoindre échoue (salon commencé), reprendre sans le bon jeton échoue
     const stranger = await env.open('intrus')
     expect((await stranger.call('room:join', { code: g.code, nickname: 'Bob' })).ok).toBe(false)
-    expect(await stranger.call('room:resume', { roomId: g.roomId, participantId: g.participantId, token: 'x'.repeat(43) })).toMatchObject({ ok: false, code: 'unauthorized' })
-    expect(await stranger.call('room:resume', { roomId: g.roomId, participantId: cs[0].grant!.participantId, token: g.token })).toMatchObject({ ok: false })
+    expect(
+      await stranger.call('room:resume', { roomId: g.roomId, participantId: g.participantId, token: 'x'.repeat(43) }),
+    ).toMatchObject({ ok: false, code: 'unauthorized' })
+    expect(
+      await stranger.call('room:resume', {
+        roomId: g.roomId,
+        participantId: cs[0].grant!.participantId,
+        token: g.token,
+      }),
+    ).toMatchObject({ ok: false })
     // Avec le bon jeton : la nouvelle connexion remplace l'ancienne
     const again = await env.open('bob2')
     expect((await again.call('room:resume', creds(g))).ok).toBe(true)
@@ -167,7 +187,7 @@ describe('serveur : salon, identité et confidentialité', () => {
     expect(last).toMatchObject({ ok: false, code: 'rate_limited' })
   })
 
-  it("rejette une origine non autorisée, accepte celle de la configuration", async () => {
+  it('rejette une origine non autorisée, accepte celle de la configuration', async () => {
     const env = await boot({ env: { ALLOWED_ORIGINS: 'http://ok.example' } })
     await expect(env.open('mauvais', { Origin: 'http://evil.example' })).rejects.toBeTruthy()
     const good = await env.open('bon', { Origin: 'http://ok.example' })
@@ -293,7 +313,10 @@ describe('serveur : pause, reprise et redémarrage', () => {
   it('partie abandonnée par l’hôte : aucun vainqueur', async () => {
     const env = await boot()
     const cs = await table(env)
-    expect(await cs[1].cmd('abandon', { confirm: true }, { expectedVersion: undefined })).toMatchObject({ ok: false, code: 'forbidden' })
+    expect(await cs[1].cmd('abandon', { confirm: true }, { expectedVersion: undefined })).toMatchObject({
+      ok: false,
+      code: 'forbidden',
+    })
     expect((await cs[0].cmd('abandon', { confirm: true })).ok).toBe(true)
     const v = await cs[2].waitFor((x) => x.status === 'abandoned')
     expect(v.result!.winnerTeam).toBeNull()

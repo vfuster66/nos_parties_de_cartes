@@ -53,16 +53,16 @@ describe('cartes autorisées (règles personnalisées)', () => {
     const t2 = [tc(0, 'R', 'pique'), tc(1, '8', 'coeur'), tc(2, 'A', 'pique')]
     expect(legal(hand, t2, 3)).toEqual(keys(hand)) // partenaire (seat 1) maître grâce à l'atout
   })
-  it("atout demandé : fournir, et monter même si le partenaire est maître", () => {
+  it('atout demandé : fournir, et monter même si le partenaire est maître', () => {
     const hand = [k('7', 'coeur'), k('V', 'coeur'), k('A', 'pique')]
     const trick = [tc(0, 'A', 'coeur'), tc(1, '8', 'coeur')] // seat 2 : partenaire (seat 0) maître avec l'as
     expect(legal(hand, trick, 2)).toEqual(keys([k('V', 'coeur')]))
   })
-  it("atout demandé, montée impossible : fournir un atout inférieur", () => {
+  it('atout demandé, montée impossible : fournir un atout inférieur', () => {
     const hand = [k('7', 'coeur'), k('8', 'coeur'), k('A', 'pique')]
     expect(legal(hand, [tc(0, 'V', 'coeur')], 1)).toEqual(keys([k('7', 'coeur'), k('8', 'coeur')]))
   })
-  it("atout demandé sans atout : défausse libre", () => {
+  it('atout demandé sans atout : défausse libre', () => {
     const hand = [k('A', 'pique'), k('7', 'carreau')]
     expect(legal(hand, [tc(0, 'V', 'coeur')], 1)).toEqual(keys(hand))
   })

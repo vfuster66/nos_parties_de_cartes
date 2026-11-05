@@ -69,12 +69,13 @@ export const seatOf = (s: MatchState, pid: string): Seat | null => {
   return i < 0 ? null : (i as Seat)
 }
 const requireParticipant = (s: MatchState, pid: string): Participant =>
-  s.participants.find((p) => p.id === pid) ?? fail('forbidden', "Vous ne faites pas partie de ce salon.")
+  s.participants.find((p) => p.id === pid) ?? fail('forbidden', 'Vous ne faites pas partie de ce salon.')
 
 // ---------- Participants (hors commandes : appelés par le serveur) ----------
 
 export function addParticipant(state: MatchState, p: Participant): MatchState {
-  if (state.status !== 'lobby') fail('wrong_phase', 'La partie a déjà commencé : aucune nouvelle personne ne peut entrer.')
+  if (state.status !== 'lobby')
+    fail('wrong_phase', 'La partie a déjà commencé : aucune nouvelle personne ne peut entrer.')
   if (state.participants.length >= MAX_PARTICIPANTS) fail('full', 'Le salon est complet (4 personnes).')
   if (state.participants.some((x) => x.nickname.toLowerCase() === p.nickname.toLowerCase()))
     fail('conflict', 'Ce pseudo est déjà pris dans le salon.')
@@ -90,7 +91,8 @@ export function removeParticipant(state: MatchState, pid: string, connected: Rea
   s.participants = s.participants.filter((p) => p.id !== pid)
   s.seats = s.seats.map((x) => (x === pid ? null : x))
   s.readyIds = s.readyIds.filter((x) => x !== pid)
-  if (s.hostId === pid) s.hostId = (s.participants.find((p) => connected.has(p.id)) ?? s.participants[0])?.id ?? s.hostId
+  if (s.hostId === pid)
+    s.hostId = (s.participants.find((p) => connected.has(p.id)) ?? s.participants[0])?.id ?? s.hostId
   return bump(s)
 }
 
@@ -106,7 +108,8 @@ export function ensureHost(state: MatchState, connected: ReadonlySet<string>): M
 
 /** Vrai si une personne assise est déconnectée (la partie en cours est alors en pause). */
 export const isPaused = (state: MatchState, connected: ReadonlySet<string>): boolean =>
-  (state.status === 'playing' || state.status === 'lobby') && state.seats.some((pid) => pid != null && !connected.has(pid))
+  (state.status === 'playing' || state.status === 'lobby') &&
+  state.seats.some((pid) => pid != null && !connected.has(pid))
 
 // ---------- Temps de la fenêtre de surcoinche ----------
 
@@ -223,7 +226,11 @@ function endRound(s: MatchState, now: number): void {
     allTricks: counts[takerTeam] === 8, // capot = huit plis réellement remportés, jamais déduit des points
     beloteTeam,
   }
-  const detail = scoreCoinche(input, { kind: 'coinche', rounding: s.config.rounding, target: s.config.target }, { allowFullPoints: true })
+  const detail = scoreCoinche(
+    input,
+    { kind: 'coinche', rounding: s.config.rounding, target: s.config.target },
+    { allowFullPoints: true },
+  )
   s.totals = [s.totals[0] + detail.delta[0], s.totals[1] + detail.delta[1]]
   const record: RoundRecord = {
     index: r.index,
@@ -319,7 +326,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
     }
     case 'leaveRoom': {
       lobbyOnly()
-      if (s.participants.length === 1) fail('invalid', "Vous êtes seul : abandonnez la partie pour fermer le salon.")
+      if (s.participants.length === 1) fail('invalid', 'Vous êtes seul : abandonnez la partie pour fermer le salon.')
       s.participants = s.participants.filter((p) => p.id !== actorId)
       s.seats = s.seats.map((x) => (x === actorId ? null : x))
       s.readyIds = s.readyIds.filter((x) => x !== actorId)
@@ -340,7 +347,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
     case 'start': {
       lobbyOnly()
       hostOnly()
-      if (ctx.paused) fail('paused', "Un joueur est déconnecté.")
+      if (ctx.paused) fail('paused', 'Un joueur est déconnecté.')
       if (s.seats.some((x) => x == null)) fail('invalid', 'Les quatre places doivent être occupées.')
       if (!s.seats.every((x) => s.readyIds.includes(x!))) fail('invalid', 'Les quatre joueurs doivent être prêts.')
       const first: Seat = s.config.firstDealer === 'random' ? (ctx.randomInt(4) as Seat) : s.config.firstDealer
@@ -383,7 +390,8 @@ function gameCommand(s: MatchState, seat: Seat | null, cmd: Command, ctx: Ctx): 
       break
     }
     case 'coinche': {
-      if (r.phase !== 'bidding' || !r.contract) fail('wrong_phase', 'Les enchères sont fermées : on ne peut plus coincher.')
+      if (r.phase !== 'bidding' || !r.contract)
+        fail('wrong_phase', 'Les enchères sont fermées : on ne peut plus coincher.')
       if (r.contract!.bidIndex !== cmd.contractRef)
         fail('stale_contract', 'Le contrat a changé : votre coinche visait une enchère précédente.')
       if (teamOf(me) === teamOf(r.contract!.seat)) fail('forbidden', 'Vous ne pouvez pas coincher votre propre équipe.')
@@ -407,7 +415,8 @@ function gameCommand(s: MatchState, seat: Seat | null, cmd: Command, ctx: Ctx): 
     case 'acceptCoinche': {
       if (r.phase !== 'window') fail('wrong_phase', "Il n'y a pas de coinche à accepter.")
       if (windowClosed) fail('window_closed', 'Le délai de surcoinche est écoulé.')
-      if (teamOf(me) !== teamOf(r.contract!.seat)) fail('forbidden', "Seule l'équipe preneuse peut accepter la coinche.")
+      if (teamOf(me) !== teamOf(r.contract!.seat))
+        fail('forbidden', "Seule l'équipe preneuse peut accepter la coinche.")
       if (r.window!.acceptedSeats.includes(me)) fail('conflict', 'Vous avez déjà accepté la coinche.')
       r.window!.acceptedSeats.push(me)
       r.bids.push({ kind: 'accept', seat: me })

@@ -9,7 +9,10 @@ export interface Logger {
   error(msg: string, f?: Fields): void
 }
 
-export function createLogger(write: (line: string) => void = (l) => process.stdout.write(l + '\n'), silent = false): Logger {
+export function createLogger(
+  write: (line: string) => void = (l) => process.stdout.write(l + '\n'),
+  silent = false,
+): Logger {
   const emit = (level: string, msg: string, f: Fields = {}): void => {
     if (silent) return
     const safe: Fields = {}

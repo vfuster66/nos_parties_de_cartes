@@ -28,7 +28,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   }
 }
 
-const PRIVATE_HOST = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|[\w-]+\.local)$/
+const PRIVATE_HOST =
+  /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|[\w-]+\.local)$/
 
 export function isOriginAllowed(origin: string | undefined, cfg: ServerConfig): boolean {
   if (!origin) return true // clients non navigateurs (les navigateurs envoient toujours Origin)

@@ -36,7 +36,7 @@ export function createApp(opts: AppOptions) {
 
   const http = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/healthz') {
-      let ok = false
+      let ok: boolean
       try {
         ok = store.ping()
       } catch {

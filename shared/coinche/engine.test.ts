@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { cardKey, sameCard } from './cards'
 import type { Seat } from './cards'
-import { addParticipant, applyCommand, expireWindow, isPaused, pauseWindow, removeParticipant, resumeWindow } from './engine'
+import {
+  addParticipant,
+  applyCommand,
+  expireWindow,
+  isPaused,
+  pauseWindow,
+  removeParticipant,
+  resumeWindow,
+} from './engine'
 import type { MatchState } from './types'
 import { RuleError } from './types'
 import { act, c, ctx, lobby, PIDS, seededRandomInt, started, suitedHands, withHands } from './testkit'
@@ -18,7 +26,8 @@ const throwsCode = (fn: () => unknown, code: string) => {
   throw new Error(`Aucune erreur (attendu ${code})`)
 }
 /** Joueurs dans l'ordre des places 0..3 (p0 = place 0). */
-const bid = (s: MatchState, seat: Seat, value: number, suit = 'coeur') => act(s, PIDS[seat], { type: 'bid', value, suit })
+const bid = (s: MatchState, seat: Seat, value: number, suit = 'coeur') =>
+  act(s, PIDS[seat], { type: 'bid', value, suit })
 const pass = (s: MatchState, seat: Seat) => act(s, PIDS[seat], { type: 'pass' })
 const turnOf = (s: MatchState) => s.round!.turn!
 
@@ -51,7 +60,13 @@ describe('salon', () => {
   it('changer de règle réinitialise les « prêt » ; seul l’hôte configure', () => {
     let s = lobby()
     throwsCode(() => act(s, 'p1', { type: 'configure', target: 1000 }), 'forbidden')
-    s = act(s, 'p0', { type: 'configure', target: 1000, rounding: 'exact', gameName: 'Soirée', teamNames: ['Les A', 'Les B'] })
+    s = act(s, 'p0', {
+      type: 'configure',
+      target: 1000,
+      rounding: 'exact',
+      gameName: 'Soirée',
+      teamNames: ['Les A', 'Les B'],
+    })
     expect(s.readyIds).toEqual([])
     expect(s.config.target).toBe(1000)
   })
@@ -61,7 +76,7 @@ describe('salon', () => {
     expect(t.hostId).toBe('p2')
     expect(t.seats[0]).toBeNull()
   })
-  it("premier donneur explicite ou tirage aléatoire côté serveur", () => {
+  it('premier donneur explicite ou tirage aléatoire côté serveur', () => {
     let s = lobby()
     s = act(s, 'p0', { type: 'configure', firstDealer: 'random' })
     for (const p of PIDS) s = act(s, p, { type: 'setReady', ready: true })
@@ -154,7 +169,7 @@ describe('enchères', () => {
     const v0 = buildView(pass(s, 3), 'p0', new Set(PIDS), 0)
     expect(new Set(v0.actions.capot!.suggestedSuits)).toEqual(new Set(['pique', 'coeur']))
   })
-  it("capot validé après trois passes", () => {
+  it('capot validé après trois passes', () => {
     let s = started()
     s = act(s, 'p0', { type: 'capot', suit: 'pique' })
     s = pass(s, 1)
@@ -253,7 +268,11 @@ describe('coinche et surcoinche', () => {
 
 describe('jeu des cartes', () => {
   /** Mains personnalisées puis enchère 80 de la place 0 validée. */
-  function play(hands: ReturnType<typeof suitedHands>, contract: { seat: Seat; value?: number | 'capot'; suit: string }, level?: 'coinche') {
+  function play(
+    hands: ReturnType<typeof suitedHands>,
+    contract: { seat: Seat; value?: number | 'capot'; suit: string },
+    level?: 'coinche',
+  ) {
     let s = withHands(started(), hands)
     // enchères : tour place 0 → on fait passer jusqu'au preneur
     for (let seat = 0; seat < contract.seat; seat++) s = pass(s, seat as Seat)
@@ -298,7 +317,15 @@ describe('jeu des cartes', () => {
     throwsCode(() => act(s, 'p2', { type: 'playCard', card: c('A', 'carreau') }), 'not_your_turn')
   })
   it('obligation de fournir appliquée par le serveur', () => {
-    let s = play([[c('A', 'pique'), c('7', 'coeur')], [c('R', 'pique'), c('8', 'coeur')], [c('7', 'carreau'), c('8', 'carreau')], [c('7', 'trefle'), c('8', 'trefle')]].map((h) => [...h]), { seat: 0, suit: 'coeur' })
+    let s = play(
+      [
+        [c('A', 'pique'), c('7', 'coeur')],
+        [c('R', 'pique'), c('8', 'coeur')],
+        [c('7', 'carreau'), c('8', 'carreau')],
+        [c('7', 'trefle'), c('8', 'trefle')],
+      ].map((h) => [...h]),
+      { seat: 0, suit: 'coeur' },
+    )
     s = act(s, 'p0', { type: 'playCard', card: c('A', 'pique') })
     throwsCode(() => act(s, 'p1', { type: 'playCard', card: c('8', 'coeur') }), 'illegal_card')
   })
@@ -336,10 +363,46 @@ describe('jeu des cartes', () => {
     // Équipe 0 (places 0 et 2) prend tous les points mais la défense gagne un pli de cartes sans valeur.
     // Atout carreau. Place 0 entame : on construit des mains où la défense gagne un pli de 7/8 avec un atout (7 de carreau) sur un pli sans valeur.
     const hands = [
-      [c('A', 'pique'), c('10', 'pique'), c('R', 'pique'), c('D', 'pique'), c('V', 'pique'), c('9', 'pique'), c('A', 'coeur'), c('10', 'coeur')],
-      [c('7', 'trefle'), c('8', 'trefle'), c('9', 'trefle'), c('7', 'coeur'), c('8', 'coeur'), c('9', 'coeur'), c('7', 'pique'), c('8', 'pique')],
-      [c('R', 'coeur'), c('D', 'coeur'), c('V', 'coeur'), c('A', 'trefle'), c('10', 'trefle'), c('R', 'trefle'), c('D', 'trefle'), c('V', 'trefle')],
-      [c('7', 'carreau'), c('8', 'carreau'), c('9', 'carreau'), c('V', 'carreau'), c('D', 'carreau'), c('R', 'carreau'), c('10', 'carreau'), c('A', 'carreau')],
+      [
+        c('A', 'pique'),
+        c('10', 'pique'),
+        c('R', 'pique'),
+        c('D', 'pique'),
+        c('V', 'pique'),
+        c('9', 'pique'),
+        c('A', 'coeur'),
+        c('10', 'coeur'),
+      ],
+      [
+        c('7', 'trefle'),
+        c('8', 'trefle'),
+        c('9', 'trefle'),
+        c('7', 'coeur'),
+        c('8', 'coeur'),
+        c('9', 'coeur'),
+        c('7', 'pique'),
+        c('8', 'pique'),
+      ],
+      [
+        c('R', 'coeur'),
+        c('D', 'coeur'),
+        c('V', 'coeur'),
+        c('A', 'trefle'),
+        c('10', 'trefle'),
+        c('R', 'trefle'),
+        c('D', 'trefle'),
+        c('V', 'trefle'),
+      ],
+      [
+        c('7', 'carreau'),
+        c('8', 'carreau'),
+        c('9', 'carreau'),
+        c('V', 'carreau'),
+        c('D', 'carreau'),
+        c('R', 'carreau'),
+        c('10', 'carreau'),
+        c('A', 'carreau'),
+      ],
     ]
     expect(hands.flat()).toHaveLength(32)
     // Ici la défense (place 3) a tous les atouts : le scénario vérifie surtout qu'allTricks vient des plis comptés.
@@ -363,7 +426,7 @@ describe('belote-rebelote', () => {
     s = bid(s, 0, 80, trumpSuit)
     return pass(pass(pass(s, 1), 2), 3)
   }
-  it("détectée dans la main initiale, aucune révélation avant la première carte", () => {
+  it('détectée dans la main initiale, aucune révélation avant la première carte', () => {
     const s = readyToPlay(hands(), 'coeur') // la place 1 a toutes les cartes de cœur
     expect(s.round!.beloteSeat).toBe(1)
     for (const p of PIDS) {
@@ -503,7 +566,8 @@ describe('confidentialité des vues', () => {
       expect(v.hand.every((h) => s.round!.hands[seat].some((x) => sameCard(x, h)))).toBe(true)
       for (let other = 0; other < 4; other++) {
         if (other === seat) continue
-        for (const card of s.round!.hands[other]) expect(json).not.toContain(`"suit":"${card.suit}","rank":"${card.rank}"`)
+        for (const card of s.round!.hands[other])
+          expect(json).not.toContain(`"suit":"${card.suit}","rank":"${card.rank}"`)
       }
       expect(json).not.toMatch(/token|hands|beloteSeat|initialHands|deck/i)
       expect(v.round!.cardsLeft).toEqual([8, 8, 8, 8])

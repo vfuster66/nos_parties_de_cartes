@@ -56,7 +56,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
+      - run: npm run typecheck # client (vue-tsc) et serveur (tsc)
 
   test:
     name: Tests unitaires (Vitest)
@@ -70,6 +70,38 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:run
+
+  e2e:
+    name: Parcours à quatre navigateurs (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
+
+  server-build:
+    name: Build du serveur
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build:server
 
   build:
     name: Build de production
@@ -98,7 +130,7 @@ jobs:
     name: Déploiement GitHub Pages
     # Jamais pour une pull request ; seulement depuis main, après réussite de tous les contrôles.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [lint, format, typecheck, test, build]
+    needs: [lint, format, typecheck, test, e2e, server-build, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

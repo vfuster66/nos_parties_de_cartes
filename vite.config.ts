@@ -30,9 +30,19 @@ export default defineConfig({
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'], navigateFallback: 'index.html' },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        navigateFallback: 'index.html',
+        // Jeu en ligne : jamais de cache pour les échanges temps réel ni les réponses privées (mains).
+        // Aucune règle runtimeCaching : tout ce qui n'est pas un fichier de l'application passe directement par le réseau.
+        navigateFallbackDenylist: [/^\/socket\.io\//, /^\/healthz/],
+      },
     }),
   ],
+  server: {
+    // Développement : le client parle au serveur de jeu via le même hôte (voir « same-origin » dans src/online/config.ts).
+    proxy: { '/socket.io': { target: process.env.ONLINE_SERVER_TARGET ?? 'http://127.0.0.1:3001', ws: true } },
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'shared/**/*.test.ts', 'server/**/*.test.ts'],

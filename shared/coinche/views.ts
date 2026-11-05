@@ -6,7 +6,16 @@ import type { Card, Seat, Suit, TeamIdx, TrickCard } from './cards'
 import { isPaused, seatOf } from './engine'
 import { legalCards } from './rules'
 import { MAX_BID, MIN_BID } from './types'
-import type { BeloteEvent, BidEntry, Config, Contract, MatchState, MatchStatus, PlayedTrick, RoundRecord } from './types'
+import type {
+  BeloteEvent,
+  BidEntry,
+  Config,
+  Contract,
+  MatchState,
+  MatchStatus,
+  PlayedTrick,
+  RoundRecord,
+} from './types'
 
 export interface ParticipantView {
   id: string
@@ -141,7 +150,7 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
   if (state.status === 'finished' || state.status === 'abandoned') return none
   const a = { ...none, canAbandon: isHost }
   if (state.status === 'lobby') {
-    a.freeSeats = seat == null ? ([0, 1, 2, 3] as Seat[]).filter((s) => !state.seats[s]) : []
+    a.freeSeats = ([0, 1, 2, 3] as Seat[]).filter((s) => !state.seats[s]) // changer de place reste possible
     a.canLeaveSeat = seat != null
     a.canReady = seat != null
     a.canConfigure = isHost
