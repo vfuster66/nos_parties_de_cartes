@@ -29,7 +29,15 @@ export const TRICK_TOTAL = 162
 
 export const multiplierOf = (l: CoincheLevel): number => (l === 'surcoinche' ? 3 : l === 'coinche' ? 2 : 1)
 
-export function validateCoincheInput(i: CoincheInput): string[] {
+export interface ScoreOptions {
+  /**
+   * Jeu en ligne : le serveur connaît les plis réellement remportés, donc 162 points sans capot sont possibles
+   * (la défense a gagné un pli sans valeur). La saisie manuelle garde le refus par défaut.
+   */
+  allowFullPoints?: boolean
+}
+
+export function validateCoincheInput(i: CoincheInput, opts: ScoreOptions = {}): string[] {
   const errors: string[] = []
   if (!i.takerId) errors.push('Choisissez le joueur preneur.')
   if (i.contract !== 'capot') {
@@ -43,7 +51,7 @@ export function validateCoincheInput(i: CoincheInput): string[] {
       errors.push('Les points de plis doivent être un nombre entier.')
     else if (i.takerPoints < 0 || i.takerPoints > TRICK_TOTAL)
       errors.push(`Les points de plis doivent être compris entre 0 et ${TRICK_TOTAL}.`)
-    else if (i.takerPoints === TRICK_TOTAL)
+    else if (i.takerPoints === TRICK_TOTAL && !opts.allowFullPoints)
       errors.push('162 points ne prouvent pas un capot : cochez « Capot réalisé » si tous les plis sont gagnés.')
   }
   if (i.level === 'none' && i.coincheTeam != null) errors.push("L'équipe qui coinche n'a pas de sens sans coinche.")
@@ -55,8 +63,8 @@ export function validateCoincheInput(i: CoincheInput): string[] {
 const other = (t: TeamIdx): TeamIdx => (t === 0 ? 1 : 0)
 
 /** Calcul d'une donne de coinche (fonction pure). */
-export function scoreCoinche(input: CoincheInput, rules: CoincheRules): TeamDealDetail {
-  const errors = validateCoincheInput(input)
+export function scoreCoinche(input: CoincheInput, rules: CoincheRules, opts: ScoreOptions = {}): TeamDealDetail {
+  const errors = validateCoincheInput(input, opts)
   if (errors.length) throw new Error(errors.join(' '))
   const t = input.takerTeam
   const d = other(t)

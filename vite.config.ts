@@ -33,5 +33,9 @@ export default defineConfig({
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'], navigateFallback: 'index.html' },
     }),
   ],
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts', 'shared/**/*.test.ts', 'server/**/*.test.ts'],
+    testTimeout: 15000,
+  },
 })

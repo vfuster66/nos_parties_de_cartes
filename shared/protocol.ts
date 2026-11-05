@@ -1,0 +1,91 @@
+// Protocole client ↔ serveur. Les schémas Zod valident TOUT ce que le serveur reçoit.
+import { z } from 'zod'
+
+const seat = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+const suit = z.enum(['pique', 'coeur', 'trefle', 'carreau'])
+const rank = z.enum(['7', '8', '9', '10', 'V', 'D', 'R', 'A'])
+const card = z.object({ suit, rank }).strict()
+const id = z.string().min(1).max(64)
+
+/** Texte affiché tel quel (jamais interprété comme HTML) : sans caractères de contrôle ni de mise en forme. */
+export const cleanText = (max: number) =>
+  z
+    .string()
+    .max(max * 4)
+    .transform((s) => s.normalize('NFC').replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '').replace(/\s+/g, ' ').trim())
+    .refine((s) => [...s].length >= 1 && [...s].length <= max, { message: `1 à ${max} caractères` })
+
+export const nicknameSchema = cleanText(20)
+
+const base = { commandId: id, expectedVersion: z.number().int().nonnegative().optional() }
+const cmd = <T extends string, S extends z.ZodRawShape>(type: T, shape: S) =>
+  z.object({ type: z.literal(type), ...base, ...shape }).strict()
+
+export const commandSchema = z.discriminatedUnion('type', [
+  // Salon
+  cmd('takeSeat', { seat }),
+  cmd('leaveSeat', {}),
+  cmd('assignSeat', { participantId: id, seat: seat.nullable() }),
+  cmd('kick', { participantId: id }),
+  cmd('setReady', { ready: z.boolean() }),
+  cmd('leaveRoom', {}),
+  cmd('configure', {
+    gameName: cleanText(40).optional(),
+    teamNames: z.tuple([cleanText(20), cleanText(20)]).optional(),
+    rounding: z.enum(['rounded', 'exact']).optional(),
+    target: z
+      .number()
+      .int()
+      .min(100)
+      .max(20000)
+      .refine((n) => n % 10 === 0, 'Multiple de 10')
+      .optional(),
+    firstDealer: z.union([z.literal('random'), seat]).optional(),
+  }),
+  cmd('start', {}),
+  cmd('abandon', { confirm: z.literal(true) }),
+  // Jeu
+  cmd('bid', { value: z.number().int(), suit }),
+  cmd('capot', { suit }),
+  cmd('pass', {}),
+  cmd('coinche', { contractRef: z.number().int().nonnegative() }),
+  cmd('surcoinche', {}),
+  cmd('acceptCoinche', {}),
+  cmd('playCard', { card }),
+  cmd('nextRound', {}),
+])
+export type Command = z.infer<typeof commandSchema>
+export type CommandType = Command['type']
+
+/** Commandes qui doivent viser la version exacte de l'état qu'a vu le joueur. */
+export const VERSIONED: ReadonlySet<CommandType> = new Set([
+  'bid',
+  'capot',
+  'pass',
+  'coinche',
+  'surcoinche',
+  'acceptCoinche',
+  'playCard',
+  'nextRound',
+])
+
+export const createRoomSchema = z.object({ nickname: nicknameSchema }).strict()
+export const joinRoomSchema = z.object({ code: z.string().max(32), nickname: nicknameSchema }).strict()
+export const resumeSchema = z.object({ roomId: id, participantId: id, token: z.string().min(16).max(128) }).strict()
+export const lookupSchema = z.object({ code: z.string().max(32) }).strict()
+
+/** Messages d'accusé de réception (ack) Socket.IO. */
+export type Ack<T = object> = ({ ok: true } & T) | { ok: false; code: string; message: string }
+export interface SessionGrant {
+  roomId: string
+  code: string
+  participantId: string
+  /** Secret : affiché une seule fois, conservé sur l'appareil, jamais dans un lien. */
+  token: string
+}
+
+export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+export const CODE_LENGTH = 8
+/** Normalise un code saisi (majuscules, sans séparateur, 0→O, 1→I… évités par l'alphabet). */
+export const normalizeCode = (s: string): string => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
+export const formatCode = (c: string): string => `${c.slice(0, 4)}-${c.slice(4)}`
