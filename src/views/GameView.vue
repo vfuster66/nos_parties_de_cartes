@@ -153,7 +153,9 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
         <template v-else>
           · {{ game.rules.endMode === 'free' ? 'arrêt libre' : `fin à ±${game.rules.threshold}` }}</template
         >
-        <button class="underline" @click="rename">Renommer</button>
+        <button class="ml-2 inline-flex min-h-11 items-center px-1 font-semibold underline" @click="rename">
+          Renommer
+        </button>
       </p>
     </PageHeader>
 
@@ -245,14 +247,28 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
           <p v-if="row.reserveAwarded.length" class="muted">
             ⚖ Réserve attribuée : {{ sum(row.reserveAwarded.map((r) => r.total)) }}
           </p>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <RouterLink v-if="!row.deal.passed" :to="`/partie/${id}/detail/${row.deal.id}`" class="btn flex-1"
-              >Détail du calcul</RouterLink
+          <div class="mt-2 grid grid-cols-3 gap-2">
+            <RouterLink
+              v-if="!row.deal.passed"
+              :to="`/partie/${id}/detail/${row.deal.id}`"
+              class="btn !px-1"
+              :aria-label="`Détail du calcul de la donne ${row.index + 1}`"
+              >Détail</RouterLink
             >
-            <RouterLink v-if="!row.deal.passed" :to="`/partie/${id}/donne/${row.deal.id}`" class="btn flex-1"
+            <RouterLink
+              v-if="!row.deal.passed"
+              :to="`/partie/${id}/donne/${row.deal.id}`"
+              class="btn !px-1"
+              :aria-label="`Modifier la donne ${row.index + 1}`"
               >Modifier</RouterLink
             >
-            <button class="btn flex-1" @click="removeDeal(row.deal.id, row.index + 1)">Supprimer</button>
+            <button
+              class="btn !px-1"
+              :aria-label="`Supprimer la donne ${row.index + 1}`"
+              @click="removeDeal(row.deal.id, row.index + 1)"
+            >
+              Supprimer
+            </button>
           </div>
         </li>
       </ol>

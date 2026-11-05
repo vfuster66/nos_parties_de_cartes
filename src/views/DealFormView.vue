@@ -155,9 +155,11 @@ async function discard() {
       </section>
 
       <p v-if="saveError" class="err" role="alert">{{ saveError }}</p>
-      <button class="btn btn-primary !min-h-14 text-xl" :disabled="!!errors.length || !candidate || saving">
-        {{ existing ? 'Enregistrer la correction' : 'Valider la donne' }}
-      </button>
+      <div class="sticky bottom-[3.75rem] z-10 -mx-3 border-t border-slate-300 bg-slate-50/95 px-3 py-2">
+        <button class="btn btn-primary !min-h-14 w-full text-xl" :disabled="!!errors.length || !candidate || saving">
+          {{ existing ? 'Enregistrer la correction' : 'Valider la donne' }}
+        </button>
+      </div>
       <button type="button" class="btn" @click="discard">Effacer le brouillon et quitter</button>
     </form>
   </template>

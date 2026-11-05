@@ -56,3 +56,16 @@ Voir [docs/REGLES.md](docs/REGLES.md).
 ## Vérifications effectuées
 
 Voir la fin de ce fichier mise à jour lors de la livraison : tests (`npm test`), `npm run typecheck`, `npm run build`, et un parcours automatisé dans Chrome (viewport 375 px) : création de joueurs et d'équipes, partie de coinche, saisie d'une donne, rechargement, absence de défilement horizontal, chargement hors connexion, tarot à six.
+
+## Déploiement, CI et PWA
+
+- Site : https://vfuster66.github.io/nos_parties_de_cartes/ (GitHub Pages, source « GitHub Actions »).
+- Workflow `.github/workflows/ci.yml` : jobs lint, formatage, TypeScript, tests, build en parallèle ; le job `deploy` ne s'exécute que sur `main` (push ou lancement manuel), après réussite de tous les contrôles, et publie l'artefact construit sur ce même commit. Aucune pull request n'est déployée. Aucun secret n'est utilisé.
+- Commandes : `npm run lint`, `lint:fix`, `format`, `format:check`, `typecheck`, `test:run`, `build`.
+- Publier : fusionner une pull request vers `main` (ou relancer le workflow depuis l'onglet Actions sur `main`).
+- Le `base` de Vite et le manifeste viennent de `BASE_PATH` (défini par le workflow à `/<nom du dépôt>/`) : aucun nom de compte n'est codé en dur. En local, `base` vaut `/`.
+- Routeur en **mode hash** (`#/partie/...`) : GitHub Pages ne réécrit pas les URL, les liens directs et rechargements fonctionnent ainsi sans contournement.
+- Mises à jour de la PWA : une bannière « Nouvelle version disponible » propose de recharger ; rien n'est rechargé automatiquement pendant une saisie. Les brouillons sont enregistrés dans IndexedDB.
+- Hors connexion : après une première visite en ligne, le service worker met l'application en cache.
+- **Données locales ≠ site publié** : IndexedDB est propre à chaque origine. Les données de `localhost` ne sont pas transférées vers `github.io` : exportez-les depuis la version locale (Paramètres → Exporter), puis importez le fichier sur le site publié.
+- Dependabot (`.github/dependabot.yml`) propose chaque semaine des mises à jour groupées (npm et Actions), sans fusion automatique.
