@@ -181,13 +181,13 @@ const turnLabel = computed(() => {
 
     <!-- Table -->
     <section
-      class="relative h-64 rounded-2xl border-2 border-teal-900 bg-teal-800 p-1 text-white"
+      class="relative h-72 rounded-2xl border-2 border-teal-900 bg-teal-800 p-1 text-white"
       aria-label="Table de jeu"
     >
       <div
         v-for="slot in [0, 1, 2, 3] as const"
         :key="slot"
-        class="absolute z-10 max-w-[7rem] rounded-lg bg-black/40 px-2 py-1 text-center text-sm"
+        class="absolute z-10 max-w-[5rem] rounded-lg bg-black/40 px-2 py-1 text-center text-sm"
         :class="[slotClass[slot], round.turn === bySlot[slot] ? 'ring-4 ring-amber-400' : '']"
         :data-testid="`seat-tag-${slot}`"
       >
@@ -213,9 +213,9 @@ const turnLabel = computed(() => {
         :class="[
           {
             0: 'bottom-14 left-1/2 -translate-x-1/2',
-            1: 'left-14 top-1/2 -translate-y-1/2',
-            2: 'left-1/2 top-14 -translate-x-1/2',
-            3: 'right-14 top-1/2 -translate-y-1/2',
+            1: 'left-[5.25rem] top-1/2 -translate-y-1/2',
+            2: 'left-1/2 top-12 -translate-x-1/2',
+            3: 'right-[5.25rem] top-1/2 -translate-y-1/2',
           }[relPos(me, t.seat)],
           centerIsShown ? 'opacity-70' : '',
         ]"

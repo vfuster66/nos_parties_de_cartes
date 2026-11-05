@@ -40,7 +40,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
 </script>
 
 <template>
-  <PageHeader title="Jouer en ligne" back="/" backLabel="Accueil" />
+  <PageHeader title="Jouer en ligne" back="/" back-label="Accueil" />
   <p v-if="!onlineEnabled" class="note" role="status">
     Le jeu en ligne n’est pas disponible : aucun serveur n’est configuré.
   </p>
