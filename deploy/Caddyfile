@@ -1,0 +1,4 @@
+# HTTPS automatique (Let's Encrypt) ; WebSocket pris en charge par reverse_proxy.
+{$DOMAIN} {
+	reverse_proxy game:3001
+}

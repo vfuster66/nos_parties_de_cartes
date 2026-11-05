@@ -4,7 +4,17 @@ import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescri
 import prettier from 'eslint-config-prettier'
 
 export default defineConfigWithVueTs(
-  { ignores: ['dist/**', 'dev-dist/**', 'coverage/**', 'node_modules/**'] },
+  {
+    ignores: [
+      'dist/**',
+      'server/dist/**',
+      'playwright-report/**',
+      'test-results/**',
+      'dev-dist/**',
+      'coverage/**',
+      'node_modules/**',
+    ],
+  },
   js.configs.recommended,
   pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
