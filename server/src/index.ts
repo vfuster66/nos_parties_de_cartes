@@ -2,6 +2,9 @@ import { loadConfig } from './config'
 import { createApp } from './app'
 import { createLogger } from './logger'
 
+// Fichiers de base et sauvegardes lisibles par le seul compte du service (empreintes de jetons à l'intérieur).
+process.umask(0o077)
+
 const config = loadConfig()
 const log = createLogger()
 const app = createApp({ config, logger: log })

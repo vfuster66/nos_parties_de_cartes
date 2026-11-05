@@ -65,7 +65,11 @@ export function createApp(opts: AppOptions) {
     socket.on('room:resume', (p: unknown, ack: unknown) => reply(ack, () => manager.resume(s, p)))
     socket.on('command', (p: unknown, ack: unknown) => reply(ack, () => manager.command(s, p)))
     socket.on('disconnect', () => {
-      manager.disconnect(s)
+      try {
+        manager.disconnect(s)
+      } catch {
+        log.error('présence non enregistrée', { socket: socket.id.slice(0, 6) })
+      }
       log.info('déconnexion', { socket: socket.id.slice(0, 6) })
     })
   })

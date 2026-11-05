@@ -359,60 +359,32 @@ describe('jeu des cartes', () => {
     s = pass(pass(pass(s, 1), 2), 3)
     expect(playOut(s).rounds[0].delta[1]).toBe(412)
   })
-  it('162 points des preneurs sans les huit plis ne donne PAS un capot', () => {
-    // Équipe 0 (places 0 et 2) prend tous les points mais la défense gagne un pli de cartes sans valeur.
-    // Atout carreau. Place 0 entame : on construit des mains où la défense gagne un pli de 7/8 avec un atout (7 de carreau) sur un pli sans valeur.
+  it('162 points des preneurs avec sept plis seulement : réussite normale, jamais un capot', () => {
+    // Donne construite : la défense (place 1) gagne le premier pli avec des cartes sans valeur
+    // (7, 9 et 8 de cœur + 7 de carreau défaussé), les preneurs prennent tout le reste, dix de der compris.
     const hands = [
-      [
-        c('A', 'pique'),
-        c('10', 'pique'),
-        c('R', 'pique'),
-        c('D', 'pique'),
-        c('V', 'pique'),
-        c('9', 'pique'),
-        c('A', 'coeur'),
-        c('10', 'coeur'),
-      ],
-      [
-        c('7', 'trefle'),
-        c('8', 'trefle'),
-        c('9', 'trefle'),
-        c('7', 'coeur'),
-        c('8', 'coeur'),
-        c('9', 'coeur'),
-        c('7', 'pique'),
-        c('8', 'pique'),
-      ],
-      [
-        c('R', 'coeur'),
-        c('D', 'coeur'),
-        c('V', 'coeur'),
-        c('A', 'trefle'),
-        c('10', 'trefle'),
-        c('R', 'trefle'),
-        c('D', 'trefle'),
-        c('V', 'trefle'),
-      ],
-      [
-        c('7', 'carreau'),
-        c('8', 'carreau'),
-        c('9', 'carreau'),
-        c('V', 'carreau'),
-        c('D', 'carreau'),
-        c('R', 'carreau'),
-        c('10', 'carreau'),
-        c('A', 'carreau'),
-      ],
-    ]
+      ['7|coeur', 'A|pique', 'V|pique', '8|pique', '10|pique', '10|trefle', '8|trefle', 'V|trefle'],
+      ['9|coeur', 'V|coeur', 'D|coeur', 'R|coeur', '10|coeur', 'A|coeur', '9|trefle', 'A|carreau'],
+      ['8|coeur', 'R|pique', '9|pique', '7|pique', 'D|pique', 'R|carreau', 'R|trefle', '9|carreau'],
+      ['7|carreau', 'D|carreau', 'D|trefle', '8|carreau', 'A|trefle', '7|trefle', 'V|carreau', '10|carreau'],
+    ].map((h) => h.map((k) => c(k.split('|')[0] as never, k.split('|')[1] as never)))
     expect(hands.flat()).toHaveLength(32)
-    // Ici la défense (place 3) a tous les atouts : le scénario vérifie surtout qu'allTricks vient des plis comptés.
-    let s = withHands(started(), hands)
-    s = bid(pass(s, 0), 1, 80, 'carreau')
-    s = pass(pass(pass(s, 2), 3), 0)
-    const done = playOut(s)
-    const rec = done.rounds[0]
-    expect(rec.trickPoints[0] + rec.trickPoints[1]).toBe(162)
-    expect(rec.trickCounts[0] + rec.trickCounts[1]).toBe(8)
+    const start = (over: Parameters<typeof started>[0] = {}, value: number | 'capot' = 80) => {
+      let s = withHands(started(over), hands)
+      s = value === 'capot' ? act(s, 'p0', { type: 'capot', suit: 'pique' }) : bid(s, 0, value, 'pique')
+      return playOut(pass(pass(pass(s, 1), 2), 3))
+    }
+    const rec = start().rounds[0]
+    expect(rec.trickCounts).toEqual([7, 1])
+    expect(rec.trickPoints).toEqual([162, 0])
+    expect(rec.detail!.outcome).toBe('success') // pas 'capot'
+    expect(rec.beloteTeam).toBe(0) // la place 2 détient roi + dame d'atout
+    expect(rec.delta).toEqual([160 + 80 + 20, 0]) // plis 162 → 160, contrat, belote une fois ; aucun bonus de capot
+    expect(start({ rounding: 'exact' }).rounds[0].delta).toEqual([162 + 80 + 20, 0])
+    // Annoncé capot : un seul pli concédé fait chuter, malgré les 162 points.
+    const failed = start({}, 'capot').rounds[0]
+    expect(failed.detail!.outcome).toBe('fail')
+    expect(failed.delta).toEqual([20, 160 + 250]) // la belote reste acquise aux preneurs
   })
 })
 

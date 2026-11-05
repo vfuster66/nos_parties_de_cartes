@@ -132,8 +132,10 @@ export class RoomManager {
   /** Enregistre un nouvel état : persiste s'il a changé, replanifie la minuterie, diffuse les vues. */
   private commit(room: Room, next: MatchState): void {
     if (next !== room.state) {
-      room.state = next
+      // Écriture AVANT mise à jour de la mémoire : si SQLite échoue, l'état en mémoire reste celui qui est durable,
+      // rien n'est diffusé et l'appelant renvoie une erreur (jamais un succès trompeur).
       this.d.store.saveRoom(next, this.d.now())
+      room.state = next
     }
     this.schedule(room)
     this.broadcast(room)
@@ -159,9 +161,17 @@ export class RoomManager {
   tick(roomId: string): void {
     const room = this.rooms.get(roomId)
     if (!room) return
-    const next = expireWindow(room.state, this.d.now())
-    if (next !== room.state) this.commit(room, next)
-    else this.schedule(room)
+    try {
+      const next = expireWindow(room.state, this.d.now())
+      if (next !== room.state) this.commit(room, next)
+      else this.schedule(room)
+    } catch {
+      // Appelé depuis une minuterie : une exception ferait tomber le processus. On réessaie dans une seconde.
+      this.d.log.error('échéance non enregistrée, nouvel essai', { room: room.state.id.slice(0, 6) })
+      if (room.timer) clearTimeout(room.timer)
+      room.timer = setTimeout(() => this.tick(roomId), 1000)
+      room.timer.unref?.()
+    }
   }
 
   tickAll(): void {
@@ -248,9 +258,9 @@ export class RoomManager {
       const next = addParticipant(room.state, { id: pid, nickname: p.data.nickname, joinedAt: this.d.now() })
       this.d.store.db.transaction(() => {
         this.d.store.setToken(next.id, pid, token)
-        room.state = next
         this.d.store.saveRoom(next, this.d.now())
       })()
+      room.state = next // seulement une fois l'écriture réussie
     } catch (e) {
       if (e instanceof RuleError) return fail(e.code, e.message)
       throw e
@@ -320,17 +330,28 @@ export class RoomManager {
       })
       if (cmd.type === 'kick' || cmd.type === 'leaveRoom') {
         const gone = cmd.type === 'kick' ? cmd.participantId : session.participantId
-        this.d.store.removeToken(room.state.id, gone)
+        const stay = this.connected(room)
+        stay.delete(gone)
+        next = ensureHost(next, stay)
+        // Jeton et état changent dans la même transaction : tout ou rien.
+        this.d.store.db.transaction(() => {
+          this.d.store.removeToken(room.state.id, gone)
+          this.d.store.saveRoom(next, this.d.now())
+        })()
+        room.state = next
         const gs = room.sockets.get(gone)
         room.sockets.delete(gone)
         if (gs) {
           gs.data.session = null
           gs.emit(cmd.type === 'kick' ? 'kicked' : 'left')
+          if (cmd.type === 'kick') gs.disconnect(true)
         }
-        next = ensureHost(next, this.connected(room))
-        if (gs && cmd.type === 'kick') gs.disconnect(true)
-      } else next = ensureHost(next, conn)
-      this.commit(room, next)
+        this.schedule(room)
+        this.broadcast(room)
+      } else {
+        next = ensureHost(next, conn)
+        this.commit(room, next)
+      }
       this.d.log.info('commande', { room: room.state.id.slice(0, 6), type: cmd.type, version: next.version })
       return remember({ ok: true, version: next.version })
     } catch (e) {
@@ -351,6 +372,19 @@ export class RoomManager {
     if (!room || room.sockets.get(session.participantId)?.id !== socket.id) return
     room.sockets.delete(session.participantId)
     this.syncPresence(room)
+    this.evictIfIdle(room)
+  }
+
+  /**
+   * Une partie terminée ou abandonnée que plus personne ne regarde n'a pas besoin de rester en mémoire :
+   * elle est rechargée depuis SQLite si quelqu'un revient consulter le résultat.
+   */
+  private evictIfIdle(room: Room): void {
+    const st = room.state
+    if (room.sockets.size > 0 || (st.status !== 'finished' && st.status !== 'abandoned')) return
+    if (room.timer) clearTimeout(room.timer)
+    this.rooms.delete(st.id)
+    this.byCode.delete(st.code)
   }
 
   /** Nettoyage périodique : salons terminés anciens et salons d'attente abandonnés. */

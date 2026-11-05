@@ -5,6 +5,7 @@ import type { Ctx } from './engine'
 import type { Card, Seat, Suit } from './cards'
 import { RANKS, SUITS } from './cards'
 import type { MatchState } from './types'
+import type { RoomView } from './views'
 
 /** PRNG déterministe (mulberry32) → entier uniforme. À n'utiliser qu'en test. */
 export function seededRandomInt(seed: number): (n: number) => number {
@@ -68,3 +69,26 @@ export function suitedHands(order: Suit[]): Card[][] {
   return order.map((suit) => RANKS.map((rank) => ({ rank, suit })))
 }
 export const ALL_SUITS = SUITS
+
+// ---------- Joueur automatique (développement et tests uniquement) ----------
+// Ne choisit que parmi les actions que le serveur annonce comme autorisées dans la vue du joueur :
+// toutes les décisions passent ensuite par le protocole normal, sans aucun raccourci.
+export type Intent = { type: Command['type'] } & Record<string, unknown>
+
+export function nextIntent(v: RoomView, rnd: (n: number) => number): Intent | null {
+  if (v.status !== 'playing' || !v.round || v.pause) return null
+  const a = v.actions
+  if (a.playable.length) return { type: 'playCard', card: a.playable[rnd(a.playable.length)] }
+  if (a.canReadyNext) return { type: 'nextRound' }
+  if (a.canAcceptCoinche || a.canSurcoinche) {
+    if (a.canSurcoinche && rnd(4) === 0) return { type: 'surcoinche' }
+    return a.canAcceptCoinche ? { type: 'acceptCoinche' } : null
+  }
+  if (a.coinche && rnd(10) === 0) return { type: 'coinche', contractRef: a.coinche.contractRef }
+  if (a.bid && rnd(3) === 0) {
+    const steps = Math.floor((a.bid.max - a.bid.min) / a.bid.step) + 1
+    return { type: 'bid', value: a.bid.min + a.bid.step * rnd(Math.min(steps, 3)), suit: SUITS[rnd(4)] }
+  }
+  if (a.capot && rnd(40) === 0) return { type: 'capot', suit: SUITS[rnd(4)] }
+  return a.canPass ? { type: 'pass' } : null
+}

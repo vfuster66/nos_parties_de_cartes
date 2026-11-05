@@ -3,6 +3,7 @@
 import { loadConfig } from './config'
 import { Store } from './store'
 
+process.umask(0o077) // la sauvegarde contient les empreintes de jetons : lisible par le seul propriétaire
 const dest = process.argv[2]
 if (!dest) {
   console.error('Usage : backup <fichier de destination>')

@@ -187,7 +187,9 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
 
 export function buildView(state: MatchState, pid: string, connected: ReadonlySet<string>, now: number): RoomView {
   const seat = seatOf(state, pid)
-  const paused = state.status === 'playing' && isPaused(state, connected)
+  // Absence d'une personne assise : bloque aussi le lancement depuis le salon (le serveur refuse `start`).
+  const absent = isPaused(state, connected)
+  const paused = state.status === 'playing' && absent
   const r = state.round
   const disconnectedSeats = ([0, 1, 2, 3] as Seat[]).filter((s) => state.seats[s] && !connected.has(state.seats[s]!))
   let round: RoundView | null = null
@@ -249,7 +251,7 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
     round,
     rounds: state.rounds.map(recordView),
     hand: seat != null && r ? sortHand(r.hands[seat], trump) : [],
-    actions: allowedActions(state, pid, paused),
+    actions: allowedActions(state, pid, absent),
     result: state.result && { winnerTeam: state.result.winnerTeam, totals: [...state.result.totals] },
     startedAt: state.startedAt,
     endedAt: state.endedAt,
