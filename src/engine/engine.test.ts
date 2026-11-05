@@ -15,7 +15,15 @@ import type { BeloteRules, CoincheRules, TarotRules } from './types'
 const R = defaultRules('coinche') as CoincheRules
 const RE: CoincheRules = { ...R, rounding: 'exact' }
 const co = (o: Partial<CoincheInput> = {}): CoincheInput => ({
-  takerId: 'a', takerTeam: 0, contract: 100, trump: 'coeur', level: 'none', takerPoints: 112, allTricks: false, beloteTeam: null, ...o,
+  takerId: 'a',
+  takerTeam: 0,
+  contract: 100,
+  trump: 'coeur',
+  level: 'none',
+  takerPoints: 112,
+  allTricks: false,
+  beloteTeam: null,
+  ...o,
 })
 const sc = (i: CoincheInput, rules = R) => scoreCoinche(i, rules).delta
 
@@ -54,7 +62,7 @@ describe('coinche', () => {
   it('la belote des preneurs peut les sauver', () => {
     const d = scoreCoinche(co({ contract: 80, takerPoints: 62, beloteTeam: 0 }), R)
     expect(d.outcome).toBe('success')
-    expect(d.delta).toEqual([(60 + 80) + 20, 100])
+    expect(d.delta).toEqual([60 + 80 + 20, 100])
   })
   it('la belote adverse ne fait pas chuter les preneurs', () => {
     const d = scoreCoinche(co({ contract: 80, takerPoints: 82, beloteTeam: 1 }), R)
@@ -87,8 +95,15 @@ describe('coinche', () => {
 
 const BR = defaultRules('belote') as BeloteRules
 const bel = (o: Partial<BeloteInput> = {}): BeloteInput => ({
-  takerId: 'a', takerTeam: 0, trump: 'pique', takerPoints: 90, capotTeam: null,
-  announcements: [{}, {}], strongest: null, beloteTeam: null, ...o,
+  takerId: 'a',
+  takerTeam: 0,
+  trump: 'pique',
+  takerPoints: 90,
+  capotTeam: null,
+  announcements: [{}, {}],
+  strongest: null,
+  beloteTeam: null,
+  ...o,
 })
 
 describe('belote', () => {
@@ -124,7 +139,10 @@ describe('belote', () => {
     expect(d.delta).toEqual([0, 160 + 50])
   })
   it('égalité des plus fortes annonces : elles s’annulent', () => {
-    const d = scoreBelote(bel({ takerPoints: 100, announcements: [{ tierce: 1 }, { tierce: 1 }], strongest: 'tie' }), BR)
+    const d = scoreBelote(
+      bel({ takerPoints: 100, announcements: [{ tierce: 1 }, { tierce: 1 }], strongest: 'tie' }),
+      BR,
+    )
     expect(d.teams[0].annonces + d.teams[1].annonces).toBe(0)
   })
   it('exige un choix explicite si les deux équipes ont des annonces', () => {
@@ -154,12 +172,28 @@ describe('belote', () => {
 })
 
 const mkGame = (kind: 'coinche' | 'belote' | 'tarot', n = 4, over: Partial<Game> = {}): Game => ({
-  id: 'g1', kind, autoName: 'x', eveningId: null, startedAt: '', endedAt: null, status: 'in_progress',
-  playerIds: ['a', 'b', 'c', 'd', 'e', 'f'].slice(0, n), teamIds: kind === 'tarot' ? null : ['t1', 't2'],
-  firstDealerId: 'a', rules: defaultRules(kind), deals: [], ...over,
+  id: 'g1',
+  kind,
+  autoName: 'x',
+  eveningId: null,
+  startedAt: '',
+  endedAt: null,
+  status: 'in_progress',
+  playerIds: ['a', 'b', 'c', 'd', 'e', 'f'].slice(0, n),
+  teamIds: kind === 'tarot' ? null : ['t1', 't2'],
+  firstDealerId: 'a',
+  rules: defaultRules(kind),
+  deals: [],
+  ...over,
 })
 let seq = 0
-const deal = (dealerId: string, input: Game['deals'][number]['input'], passed = false) => ({ id: `d${++seq}`, dealerId, passed, input, createdAt: '' })
+const deal = (dealerId: string, input: Game['deals'][number]['input'], passed = false) => ({
+  id: `d${++seq}`,
+  dealerId,
+  passed,
+  input,
+  createdAt: '',
+})
 
 describe('réserve de litige (belote)', () => {
   it('plusieurs litiges cumulent et la prochaine donne décisive attribue', () => {
@@ -206,7 +240,11 @@ describe('fin de partie', () => {
     expect(computeResult(g).winners).toEqual([0])
     g.deals = [deal('a', co({ contract: 80, takerPoints: 80 })), deal('b', co({ takerPoints: 90 }))]
     // 140+... on construit une égalité : 0/260 vs ... simple vérification d'égalité directe
-    const tie = { ...g, rules: { ...g.rules, target: 100 } as CoincheRules, deals: [deal('a', co({ contract: 80, takerPoints: 81 }))] }
+    const tie = {
+      ...g,
+      rules: { ...g.rules, target: 100 } as CoincheRules,
+      deals: [deal('a', co({ contract: 80, takerPoints: 81 }))],
+    }
     expect(computeGame(tie).totals).toEqual([160, 80])
   })
   it('rotation du donneur et recalcul explicite', () => {
@@ -222,7 +260,14 @@ describe('fin de partie', () => {
 const TR = defaultRules('tarot') as TarotRules
 const ids = (n: number) => ['a', 'b', 'c', 'd', 'e', 'f'].slice(0, n)
 const ta = (o: Partial<TarotInput> = {}): TarotInput => ({
-  takerId: 'a', contract: 'garde', gap: 5, success: true, calledId: null, aloneReason: null, bonuses: [], ...o,
+  takerId: 'a',
+  contract: 'garde',
+  gap: 5,
+  success: true,
+  calledId: null,
+  aloneReason: null,
+  bonuses: [],
+  ...o,
 })
 const tarot = (i: TarotInput, n = 4, dealer = 'a') => scoreTarot(i, { playerIds: ids(n), dealerId: dealer }, TR)
 
@@ -249,18 +294,37 @@ describe('tarot', () => {
     expect(tarot(ta({ success: false, aloneReason: 'self_call' }), 5).delta).toEqual([-320, 80, 80, 80, 80])
   })
   it('primes', () => {
-    const b = (type: TarotInput['bonuses'][number]['type'], playerId: string, extra = {}) => ({ type, playerId, ...extra })
+    const b = (type: TarotInput['bonuses'][number]['type'], playerId: string, extra = {}) => ({
+      type,
+      playerId,
+      ...extra,
+    })
     const base = { contract: 'pousse' as const, gap: 0, aloneReason: 'self_call' as const }
     expect(tarot(ta({ ...base, bonuses: [b('petitAuBout', 'b')] }), 4).bonuses[0].delta).toEqual([-10, 30, -10, -10])
-    expect(tarot(ta({ ...base, bonuses: [b('poigneDouble', 'b')] }), 5).bonuses[0].delta).toEqual([-20, 80, -20, -20, -20])
-    expect(tarot(ta({ ...base, bonuses: [b('petitChelem', 'b', { tricksConceded: 5 })] }), 5).bonuses[0].delta).toEqual([10, -40, 10, 10, 10])
-    expect(tarot(ta({ ...base, bonuses: [b('grandChelem', 'b', { tricksConceded: 1 })] }), 5).bonuses[0].delta).toEqual([20, -80, 20, 20, 20])
-    expect(tarot(ta({ ...base, bonuses: [b('petitChelem', 'b', { tricksConceded: 3 })] }), 5).bonuses[0].succeeded).toBe(true)
+    expect(tarot(ta({ ...base, bonuses: [b('poigneDouble', 'b')] }), 5).bonuses[0].delta).toEqual([
+      -20, 80, -20, -20, -20,
+    ])
+    expect(tarot(ta({ ...base, bonuses: [b('petitChelem', 'b', { tricksConceded: 5 })] }), 5).bonuses[0].delta).toEqual(
+      [10, -40, 10, 10, 10],
+    )
+    expect(tarot(ta({ ...base, bonuses: [b('grandChelem', 'b', { tricksConceded: 1 })] }), 5).bonuses[0].delta).toEqual(
+      [20, -80, 20, 20, 20],
+    )
+    expect(
+      tarot(ta({ ...base, bonuses: [b('petitChelem', 'b', { tricksConceded: 3 })] }), 5).bonuses[0].succeeded,
+    ).toBe(true)
     expect(tarot(ta({ ...base, bonuses: [b('blancTete', 'a')] }), 3).bonuses[0].delta).toEqual([20, -10, -10])
   })
   it('plusieurs primes, conservées malgré la chute, somme nulle', () => {
     const d = tarot(
-      ta({ success: false, gap: 10, bonuses: [{ type: 'petitAuBout', playerId: 'a' }, { type: 'poigneSimple', playerId: 'c' }] }),
+      ta({
+        success: false,
+        gap: 10,
+        bonuses: [
+          { type: 'petitAuBout', playerId: 'a' },
+          { type: 'poigneSimple', playerId: 'c' },
+        ],
+      }),
       4,
     )
     expect(d.outcome).toBe('fail')
@@ -275,7 +339,9 @@ describe('tarot', () => {
     expect(d.bonuses[0].delta[0]).toBe(0)
     expect(() => tarot(ta({ takerId: 'a', calledId: 'c' }), 6, 'a')).toThrow()
     expect(() => tarot(ta({ takerId: 'b', calledId: 'a' }), 6, 'a')).toThrow()
-    expect(() => tarot(ta({ takerId: 'b', calledId: 'c', bonuses: [{ type: 'blancTete', playerId: 'a' }] }), 6, 'a')).toThrow()
+    expect(() =>
+      tarot(ta({ takerId: 'b', calledId: 'c', bonuses: [{ type: 'blancTete', playerId: 'a' }] }), 6, 'a'),
+    ).toThrow()
   })
   it('appelé identique au preneur refusé ; cinq joueurs exigent un appel', () => {
     expect(() => tarot(ta({ calledId: 'a' }), 5)).toThrow()
@@ -292,7 +358,9 @@ describe('tarot : fin de partie et classement', () => {
     const g = mkGame('tarot', 3, { rules: { ...TR, endMode: 'threshold', threshold: 100 } })
     g.deals = [deal('a', ta({ contract: 'pousse', gap: 0 }))] // 40 → preneur +80
     expect(computeGame(g).endReached).toBe(false)
-    g.deals.push(deal('b', ta({ takerId: 'a', contract: 'pousse', gap: 0, bonuses: [{ type: 'poigneTriple', playerId: 'a' }] })))
+    g.deals.push(
+      deal('b', ta({ takerId: 'a', contract: 'pousse', gap: 0, bonuses: [{ type: 'poigneTriple', playerId: 'a' }] })),
+    )
     const s = computeGame(g)
     expect(s.totals).toEqual([80 + 80 + 60, -40 - 40 - 30, -40 - 40 - 30])
     expect(s.endReached).toBe(true)
@@ -330,7 +398,12 @@ describe('statistiques', () => {
     // gap 0 => réussi pour les deux : a +240, b +240 → égalité en tête
     const data = { players, teams: [], games: [g] }
     const pr = playerRanking(data, 'tarot')
-    expect(pr.filter((r) => r.tally.wins === 1).map((r) => r.id).sort()).toEqual(['a', 'b'])
+    expect(
+      pr
+        .filter((r) => r.tally.wins === 1)
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(['a', 'b'])
   })
   it('recalcul après correction d’une partie terminée', () => {
     const g = mkGame('coinche', 4, { status: 'finished' })

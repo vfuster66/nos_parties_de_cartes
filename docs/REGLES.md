@@ -3,10 +3,12 @@
 Ces règles sont celles de l'application ; elles ne sont pas les règles officielles.
 
 ## Arrondis
+
 - **Coinche / belote** (mode arrondi) : dizaine la plus proche, 5 vers le haut (84→80, 85→90, 112→110), appliquée **séparément** à chaque équipe, avant ajout des annonces et de la belote. Réussite, chute et litige se jugent toujours sur les points **exacts**.
 - **Tarot** : réussite jugée sur l'écart exact ; on arrondit la valeur absolue de l'écart (≤ 5 → dizaine inférieure, > 5 → supérieure : 5→0, 5,5→10, 15→10, 15,5→20), puis V = ±(base du contrat + écart arrondi).
 
 ## Coinche (4 joueurs, 2 équipes, aucune annonce, belote-rebelote seule)
+
 1. Points de plis exacts d'une équipe saisis (dix de der inclus, belote exclue) ; complément sur 162.
 2. Capot : case distincte (162 points ne prouvent pas un capot).
 3. Réussite si `points exacts des preneurs + leur belote ≥ contrat` (la belote adverse n'aide jamais ni ne nuit).
@@ -17,7 +19,9 @@ Ces règles sont celles de l'application ; elles ne sont pas les règles officie
 8. Fin : à la fin d'une donne, une équipe ≥ objectif (3 000 par défaut) ; le plus haut total gagne ; égalité → on continue.
 
 ## Belote (4 joueurs, 2 équipes)
+
 Annonces : tierce 20, cinquante 50, cent 100, carré de 7/8 0, carré de 9 150, carré de valets 200, carré as/10/rois/dames 100. Belote-rebelote 20.
+
 1. **Plus forte annonce** (choix de l'utilisateur : équipe A, B ou égalité) : l'équipe désignée garde toutes ses annonces, l'autre perd les siennes ; égalité = toutes annulées. La belote est indépendante.
 2. **Capot** (prioritaire) : l'équipe qui a tous les plis marque 250 ; chaque équipe garde ses annonces validées et sa belote.
 3. Sinon comparaison des **totaux exacts** `plis + annonces validées + belote` :
@@ -28,6 +32,7 @@ Annonces : tierce 20, cinquante 50, cent 100, carré de 7/8 0, carré de 9 150, 
 5. Fin : comme la coinche (objectif 1 000 par défaut).
 
 ## Tarot (3 à 6 inscrits)
+
 - Bases : pousse 40, garde 80, garde sans 160, garde contre 320 (réglables). L'écart n'est jamais multiplié par le contrat.
 - Répartition de V : à 3 preneur +2V, défenseurs −V ; à 4 preneur +3V ; à 5 avec partenaire preneur +2V, appelé +V, défenseurs −V ; à 5 seul (s'appelle / roi au chien) preneur +4V. V négatif inverse les signes.
 - À 6 inscrits : 5 actifs, le donneur est au repos (0 point, ni preneur, ni appelé, ni bénéficiaire) et le donneur tourne à chaque donne.

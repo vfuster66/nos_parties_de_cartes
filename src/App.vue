@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import ConfirmHost from './components/ConfirmHost.vue'
+import UpdatePrompt from './components/UpdatePrompt.vue'
 import { useData } from './stores/data'
 
 const data = useData()
@@ -24,13 +25,29 @@ const data = useData()
     </main>
     <nav class="fixed inset-x-0 bottom-0 z-10 border-t-2 border-slate-300 bg-white" aria-label="Navigation principale">
       <ul class="mx-auto flex max-w-2xl">
-        <li v-for="l in [['/', 'Accueil', '🏠'], ['/soirees', 'Soirées', '🌙'], ['/classements', 'Classements', '🏆'], ['/parametres', 'Réglages', '⚙️']]" :key="l[0]" class="flex-1">
-          <RouterLink :to="l[0]" class="flex min-h-14 flex-col items-center justify-center text-sm font-semibold" active-class="bg-teal-50 text-teal-900 underline" exact-active-class="bg-teal-50 text-teal-900 underline">
-            <span aria-hidden="true">{{ l[2] }}</span>{{ l[1] }}
+        <li
+          v-for="l in [
+            ['/', 'Accueil', '🏠'],
+            ['/soirees', 'Soirées', '🌙'],
+            ['/classements', 'Classements', '🏆'],
+            ['/parametres', 'Réglages', '⚙️'],
+          ]"
+          :key="l[0]"
+          class="flex-1"
+        >
+          <RouterLink
+            :to="l[0]"
+            class="flex min-h-14 flex-col items-center justify-center text-sm font-semibold"
+            active-class="bg-teal-50 text-teal-900 underline"
+            exact-active-class="bg-teal-50 text-teal-900 underline"
+          >
+            <span aria-hidden="true">{{ l[2] }}</span
+            >{{ l[1] }}
           </RouterLink>
         </li>
       </ul>
     </nav>
     <ConfirmHost />
+    <UpdatePrompt />
   </div>
 </template>

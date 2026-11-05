@@ -39,9 +39,14 @@ export function migrate(raw: unknown): { file?: BackupFile; errors: string[] } {
   if (!isObj(raw)) return { errors: ['Le fichier n’est pas un objet JSON valide.'] }
   if (raw.app !== APP_ID) return { errors: ['Ce fichier n’est pas une sauvegarde de « Nos parties de cartes ».'] }
   let v = raw.schemaVersion
-  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) return { errors: ['Version de sauvegarde absente ou invalide.'] }
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1)
+    return { errors: ['Version de sauvegarde absente ou invalide.'] }
   if (v > SCHEMA_VERSION)
-    return { errors: [`Cette sauvegarde (version ${v}) vient d’une version plus récente de l’application (version ${SCHEMA_VERSION}).`] }
+    return {
+      errors: [
+        `Cette sauvegarde (version ${v}) vient d’une version plus récente de l’application (version ${SCHEMA_VERSION}).`,
+      ],
+    }
   let cur: Record<string, unknown> = raw
   while (v < SCHEMA_VERSION) {
     const m = MIGRATIONS[v]
@@ -61,7 +66,8 @@ const isStr = (x: unknown): x is string => typeof x === 'string' && x.length > 0
 export function validateData(d: unknown): string[] {
   const errs: string[] = []
   if (!isObj(d)) return ['Données absentes.']
-  for (const k of ['players', 'teams', 'evenings', 'games'] as const) if (!Array.isArray(d[k])) errs.push(`Collection « ${k} » manquante.`)
+  for (const k of ['players', 'teams', 'evenings', 'games'] as const)
+    if (!Array.isArray(d[k])) errs.push(`Collection « ${k} » manquante.`)
   if (errs.length) return errs
   const players = d.players as Player[]
   const teams = d.teams as Team[]
@@ -82,7 +88,12 @@ export function validateData(d: unknown): string[] {
   ids(games, 'Parties')
   for (const p of players) if (!isStr(p.name)) errs.push(`Joueur ${p.id} sans nom.`)
   for (const t of teams) {
-    if (!Array.isArray(t.memberIds) || t.memberIds.length !== 2 || t.memberIds[0] === t.memberIds[1] || !t.memberIds.every((m) => pIds.has(m)))
+    if (
+      !Array.isArray(t.memberIds) ||
+      t.memberIds.length !== 2 ||
+      t.memberIds[0] === t.memberIds[1] ||
+      !t.memberIds.every((m) => pIds.has(m))
+    )
       errs.push(`Équipe ${t.id} : membres invalides.`)
   }
   for (const e of evenings) if (!isStr(e.date)) errs.push(`Soirée ${e.id} sans date.`)
@@ -97,11 +108,13 @@ export function validateGame(g: Game, pIds: Set<string>, tIds: Set<string>, eIds
   const n = `Partie ${g.id}`
   if (!['coinche', 'belote', 'tarot'].includes(g.kind)) return [`${n} : jeu inconnu.`]
   if (!['in_progress', 'finished', 'abandoned'].includes(g.status)) errs.push(`${n} : état inconnu.`)
-  if (!Array.isArray(g.playerIds) || new Set(g.playerIds).size !== g.playerIds.length) return [`${n} : joueurs en double ou absents.`]
+  if (!Array.isArray(g.playerIds) || new Set(g.playerIds).size !== g.playerIds.length)
+    return [`${n} : joueurs en double ou absents.`]
   const size = g.playerIds.length
   if (g.kind === 'tarot' ? size < 3 || size > 6 : size !== 4) errs.push(`${n} : nombre de joueurs invalide.`)
   if (!g.playerIds.every((p) => pIds.has(p))) errs.push(`${n} : joueur inconnu.`)
-  if (g.kind !== 'tarot' && (!Array.isArray(g.teamIds) || !g.teamIds.every((t) => tIds.has(t)))) errs.push(`${n} : équipe inconnue.`)
+  if (g.kind !== 'tarot' && (!Array.isArray(g.teamIds) || !g.teamIds.every((t) => tIds.has(t))))
+    errs.push(`${n} : équipe inconnue.`)
   if (g.eveningId && !eIds.has(g.eveningId)) errs.push(`${n} : soirée inconnue.`)
   if (!g.playerIds.includes(g.firstDealerId)) errs.push(`${n} : premier donneur invalide.`)
   if (!isObj(g.rules) || g.rules.kind !== g.kind) errs.push(`${n} : règles invalides.`)
@@ -113,8 +126,11 @@ export function validateGame(g: Game, pIds: Set<string>, tIds: Set<string>, eIds
     if (!g.playerIds.includes(d.dealerId)) errs.push(`${n} : donneur d’une donne inconnu.`)
     if (!d.passed) {
       const inp = d.input as (CoincheInput | BeloteInput | TarotInput) | null
-      if (!isObj(inp) || !g.playerIds.includes((inp as { takerId: string }).takerId)) errs.push(`${n} : preneur invalide dans une donne.`)
-      else for (const v of Object.values(inp)) if (typeof v === 'number' && !Number.isFinite(v)) errs.push(`${n} : valeur non finie dans une donne.`)
+      if (!isObj(inp) || !g.playerIds.includes((inp as { takerId: string }).takerId))
+        errs.push(`${n} : preneur invalide dans une donne.`)
+      else
+        for (const v of Object.values(inp))
+          if (typeof v === 'number' && !Number.isFinite(v)) errs.push(`${n} : valeur non finie dans une donne.`)
     }
   }
   return errs
@@ -123,7 +139,9 @@ export function validateGame(g: Game, pIds: Set<string>, tIds: Set<string>, eIds
 export type Conflict = { kind: 'players' | 'teams' | 'evenings' | 'games'; id: string; label: string }
 
 const stable = (v: unknown): string =>
-  JSON.stringify(v, (_k, x) => (isObj(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x))
+  JSON.stringify(v, (_k, x) =>
+    isObj(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x,
+  )
 
 export interface MergePlan {
   add: Record<Conflict['kind'], string[]>
@@ -132,7 +150,11 @@ export interface MergePlan {
 }
 
 /** Compare l'import à l'existant : ajouts, identiques (ignorés), conflits (même id, contenu différent). */
-export function planMerge(current: BackupData, incoming: BackupData, label: (kind: Conflict['kind'], x: never) => string): MergePlan {
+export function planMerge(
+  current: BackupData,
+  incoming: BackupData,
+  label: (kind: Conflict['kind'], x: never) => string,
+): MergePlan {
   const plan: MergePlan = { add: { players: [], teams: [], evenings: [], games: [] }, identical: 0, conflicts: [] }
   for (const kind of ['players', 'teams', 'evenings', 'games'] as const) {
     const cur = new Map((current[kind] as { id: string }[]).map((x) => [x.id, x]))

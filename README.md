@@ -17,13 +17,13 @@ npm run preview    # sert dist/ (nécessaire pour tester le mode hors connexion)
 
 ## Organisation du code
 
-| Dossier | Rôle |
-|---|---|
-| `src/engine/` | Règles et calculs **purs** (sans Vue ni stockage) : `coinche.ts`, `belote.ts`, `tarot.ts`, `rounding.ts`, `game.ts` (progression, réserves, fin de partie), `stats.ts` (classements recalculés à partir des donnes), `describe.ts` |
-| `src/db/` | `idb.ts` (IndexedDB), `backup.ts` (format versionné, migrations, validation, fusion) |
-| `src/stores/data.ts` | Store Pinia : joueurs, équipes, soirées, parties, brouillons, préférences, annulation |
-| `src/forms.ts` | Conversion formulaire (textes) ↔ entrées du moteur |
-| `src/views/`, `src/components/` | Écrans et composants |
+| Dossier                         | Rôle                                                                                                                                                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/engine/`                   | Règles et calculs **purs** (sans Vue ni stockage) : `coinche.ts`, `belote.ts`, `tarot.ts`, `rounding.ts`, `game.ts` (progression, réserves, fin de partie), `stats.ts` (classements recalculés à partir des donnes), `describe.ts` |
+| `src/db/`                       | `idb.ts` (IndexedDB), `backup.ts` (format versionné, migrations, validation, fusion)                                                                                                                                               |
+| `src/stores/data.ts`            | Store Pinia : joueurs, équipes, soirées, parties, brouillons, préférences, annulation                                                                                                                                              |
+| `src/forms.ts`                  | Conversion formulaire (textes) ↔ entrées du moteur                                                                                                                                                                                 |
+| `src/views/`, `src/components/` | Écrans et composants                                                                                                                                                                                                               |
 
 Les scores, réserves, résultats et statistiques ne sont **jamais stockés** : ils sont recalculés à partir des donnes. Une correction, une suppression ou une réouverture met donc tout à jour sans compteur qui diverge.
 

@@ -61,7 +61,11 @@ export function computeGame(g: Game): GameState {
     if (!deal.passed && deal.input) {
       try {
         if (g.kind === 'tarot') {
-          tarotDetail = scoreTarot(deal.input as TarotInput, { playerIds: g.playerIds, dealerId: deal.dealerId }, g.rules as never)
+          tarotDetail = scoreTarot(
+            deal.input as TarotInput,
+            { playerIds: g.playerIds, dealerId: deal.dealerId },
+            g.rules as never,
+          )
           delta = [...tarotDetail.delta]
         } else {
           teamDetail =
@@ -85,8 +89,18 @@ export function computeGame(g: Game): GameState {
     }
     totals = totals.map((t, k) => t + delta[k])
     rows.push({
-      deal, index, delta, totalsAfter: totals, teamDetail, tarotDetail, error,
-      reserveBefore: before, reserveAwarded: awarded, reserveCreated: created, reserveAfter: reserve, reserveWinner: winner,
+      deal,
+      index,
+      delta,
+      totalsAfter: totals,
+      teamDetail,
+      tarotDetail,
+      error,
+      reserveBefore: before,
+      reserveAwarded: awarded,
+      reserveCreated: created,
+      reserveAfter: reserve,
+      reserveWinner: winner,
     })
   })
   const last = g.deals[g.deals.length - 1]
@@ -112,8 +126,16 @@ export function isEndReached(g: Game, totals: number[], reserve: ReserveItem[]):
   return totals[0] !== totals[1] // égalité : on poursuit
 }
 
-export interface RankEntry { index: number; score: number; rank: number }
-export interface GameResult { ranking: RankEntry[]; winners: number[]; draw: boolean }
+export interface RankEntry {
+  index: number
+  score: number
+  rank: number
+}
+export interface GameResult {
+  ranking: RankEntry[]
+  winners: number[]
+  draw: boolean
+}
 
 /** Classement final (ex æquo conservés). */
 export function computeResult(g: Game, totals = computeGame(g).totals): GameResult {

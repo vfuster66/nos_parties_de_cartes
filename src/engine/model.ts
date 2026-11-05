@@ -3,10 +3,24 @@ import type { CoincheInput } from './coinche'
 import type { TarotInput } from './tarot'
 import type { GameKind, Rules } from './types'
 
-export interface Player { id: string; name: string; createdAt: string }
+export interface Player {
+  id: string
+  name: string
+  createdAt: string
+}
 /** Équipe identifiée par ses deux membres (ordre indifférent). */
-export interface Team { id: string; memberIds: [string, string]; name?: string; createdAt: string }
-export interface Evening { id: string; name?: string; date: string; createdAt: string }
+export interface Team {
+  id: string
+  memberIds: [string, string]
+  name?: string
+  createdAt: string
+}
+export interface Evening {
+  id: string
+  name?: string
+  date: string
+  createdAt: string
+}
 
 export type GameStatus = 'in_progress' | 'finished' | 'abandoned'
 

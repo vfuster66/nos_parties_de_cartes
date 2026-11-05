@@ -14,7 +14,16 @@ export interface Tally {
   takeFail: number
   takeLitige: number
 }
-const emptyTally = (): Tally => ({ played: 0, wins: 0, losses: 0, draws: 0, takes: 0, takeSuccess: 0, takeFail: 0, takeLitige: 0 })
+const emptyTally = (): Tally => ({
+  played: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  takes: 0,
+  takeSuccess: 0,
+  takeFail: 0,
+  takeLitige: 0,
+})
 export const winRate = (t: Tally): number => (t.played ? t.wins / t.played : 0)
 
 export interface Participation {
@@ -77,10 +86,18 @@ export function tallyOf(parts: Participation[]): Tally {
   return t
 }
 
-export interface RankRow { id: string; name: string; tally: Tally; rate: number; rank: number }
+export interface RankRow {
+  id: string
+  name: string
+  tally: Tally
+  rate: number
+  rank: number
+}
 
 function rankRows(rows: Omit<RankRow, 'rank'>[]): RankRow[] {
-  const sorted = [...rows].sort((a, b) => b.tally.wins - a.tally.wins || b.rate - a.rate || a.name.localeCompare(b.name, 'fr'))
+  const sorted = [...rows].sort(
+    (a, b) => b.tally.wins - a.tally.wins || b.rate - a.rate || a.name.localeCompare(b.name, 'fr'),
+  )
   const out: RankRow[] = []
   sorted.forEach((r, i) => {
     const prev = out[i - 1]
@@ -90,7 +107,11 @@ function rankRows(rows: Omit<RankRow, 'rank'>[]): RankRow[] {
   return out
 }
 
-export interface StatsData { players: Player[]; teams: Team[]; games: Game[] }
+export interface StatsData {
+  players: Player[]
+  teams: Team[]
+  games: Game[]
+}
 
 /** Classement des joueurs, par jeu (ou tous jeux confondus si kind est null) et éventuellement par soirée. */
 export function playerRanking(data: StatsData, kind: GameKind | null, eveningId?: string): RankRow[] {
@@ -128,7 +149,10 @@ export function teamRanking(data: StatsData, kind: GameKind | null, eveningId?: 
 }
 
 export function playerParticipations(data: StatsData, playerId: string, kind?: GameKind): Participation[] {
-  return data.games.filter((g) => !kind || g.kind === kind).flatMap(participations).filter((p) => p.playerIds.includes(playerId))
+  return data.games
+    .filter((g) => !kind || g.kind === kind)
+    .flatMap(participations)
+    .filter((p) => p.playerIds.includes(playerId))
 }
 export function teamParticipations(data: StatsData, teamId: string): Participation[] {
   return data.games.flatMap(participations).filter((p) => p.teamId === teamId)

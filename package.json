@@ -8,7 +8,12 @@
     "build": "vue-tsc --noEmit && vite build",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "pinia": "^4.1.0",
@@ -16,14 +21,26 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.4",
+    "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.12.0",
     "fake-indexeddb": "^6.2.7",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4.3.4",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
     "vite": "^8.3.6",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^4.1.12",
     "vue-tsc": "^3.3.14"
+  },
+  "engines": {
+    "node": ">=20.19"
   }
 }

@@ -58,7 +58,8 @@ export function validateTarotInput(i: TarotInput, ctx: TarotContext, rules: Taro
     if (i.calledId) {
       if (i.calledId === resting) errors.push('Le donneur au repos ne peut pas être appelé.')
       else if (!active.includes(i.calledId)) errors.push('L’appelé doit faire partie des joueurs actifs.')
-      else if (i.calledId === i.takerId) errors.push('Pour un appel à soi-même, choisissez « Le preneur s’appelle » au lieu de nommer le preneur.')
+      else if (i.calledId === i.takerId)
+        errors.push('Pour un appel à soi-même, choisissez « Le preneur s’appelle » au lieu de nommer le preneur.')
     } else if (!i.aloneReason) {
       errors.push('À cinq joueurs, indiquez l’appelé ou le motif du jeu seul (le preneur s’appelle, ou roi au chien).')
     }
@@ -100,9 +101,13 @@ export function scoreTarot(input: TarotInput, ctx: TarotContext, rules: TarotRul
   const base = rules.contractBases[input.contract]
   const value = (success ? 1 : -1) * (base + rounded)
   const steps: string[] = []
-  steps.push(`Écart exact ${fmt(input.gap)} → ${success ? 'contrat réussi' : 'contrat chuté'}${input.gap === 0 ? ' (écart nul = réussi)' : ''}.`)
+  steps.push(
+    `Écart exact ${fmt(input.gap)} → ${success ? 'contrat réussi' : 'contrat chuté'}${input.gap === 0 ? ' (écart nul = réussi)' : ''}.`,
+  )
   steps.push(`Écart arrondi à la dizaine : ${fmt(input.gap)} → ${rounded}.`)
-  steps.push(`Valeur : ${success ? '+' : '−'}(base ${TAROT_CONTRACT_LABELS[input.contract]} ${base} + écart arrondi ${rounded}) → V = ${value > 0 ? '+' : ''}${value}.`)
+  steps.push(
+    `Valeur : ${success ? '+' : '−'}(base ${TAROT_CONTRACT_LABELS[input.contract]} ${base} + écart arrondi ${rounded}) → V = ${value > 0 ? '+' : ''}${value}.`,
+  )
 
   // Répartition du contrat
   const contractDelta = ctx.playerIds.map(() => 0)
@@ -143,7 +148,17 @@ export function scoreTarot(input: TarotInput, ctx: TarotContext, rules: TarotRul
   if (ctx.playerIds.length === 6) steps.push('Donneur au repos : variation 0 pour cette donne.')
 
   const delta = contractDelta.map((v, k) => v + bonuses.reduce((s, b) => s + (b.delta[k] ?? 0), 0))
-  return { outcome: success ? 'success' : 'fail', gap: input.gap, roundedGap: rounded, base, value, contractDelta, bonuses, delta, steps }
+  return {
+    outcome: success ? 'success' : 'fail',
+    gap: input.gap,
+    roundedGap: rounded,
+    base,
+    value,
+    contractDelta,
+    bonuses,
+    delta,
+    steps,
+  }
 }
 
 const fmt = (x: number) => String(x).replace('.', ',')

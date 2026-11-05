@@ -25,7 +25,11 @@ export interface NewGameOptions {
   rules: Rules
 }
 
-interface UndoEntry { gameId: string; label: string; before: Game }
+interface UndoEntry {
+  gameId: string
+  label: string
+  before: Game
+}
 
 export const useData = defineStore('data', {
   state: () => ({
@@ -62,17 +66,29 @@ export const useData = defineStore('data', {
     lastActiveGame: (s) =>
       [...s.games].filter((g) => g.status === 'in_progress').sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0],
     backupData: (s): BackupData => ({
-      players: s.players, teams: s.teams, evenings: s.evenings, games: s.games, preferences: s.preferences,
+      players: s.players,
+      teams: s.teams,
+      evenings: s.evenings,
+      games: s.games,
+      preferences: s.preferences,
     }),
   },
   actions: {
     async load() {
       try {
         const [players, teams, evenings, games, drafts, meta] = await Promise.all([
-          idb.getAll<Player>('players'), idb.getAll<Team>('teams'), idb.getAll<Evening>('evenings'),
-          idb.getAll<Game>('games'), idb.getAll<Draft>('drafts'), idb.getAll<{ key: string; value: Preferences }>('meta'),
+          idb.getAll<Player>('players'),
+          idb.getAll<Team>('teams'),
+          idb.getAll<Evening>('evenings'),
+          idb.getAll<Game>('games'),
+          idb.getAll<Draft>('drafts'),
+          idb.getAll<{ key: string; value: Preferences }>('meta'),
         ])
-        this.players = players; this.teams = teams; this.evenings = evenings; this.games = games; this.drafts = drafts
+        this.players = players
+        this.teams = teams
+        this.evenings = evenings
+        this.games = games
+        this.drafts = drafts
         const pref = meta.find((m) => m.key === 'preferences')
         if (pref) this.preferences = pref.value
       } catch (e) {
@@ -114,7 +130,12 @@ export const useData = defineStore('data', {
     async deletePlayer(id: string) {
       if (this.playerInGames(id)) throw new Error('Ce joueur participe à des parties : il ne peut pas être supprimé.')
       const teamOps = this.teams.filter((t) => t.memberIds.includes(id))
-      await this.guard(() => idb.batch([{ store: 'players', remove: id }, ...teamOps.map((t) => ({ store: 'teams' as const, remove: t.id }))]))
+      await this.guard(() =>
+        idb.batch([
+          { store: 'players', remove: id },
+          ...teamOps.map((t) => ({ store: 'teams' as const, remove: t.id })),
+        ]),
+      )
       this.players = this.players.filter((p) => p.id !== id)
       this.teams = this.teams.filter((t) => !t.memberIds.includes(id))
     },
@@ -165,9 +186,15 @@ export const useData = defineStore('data', {
     },
     async deleteEvening(id: string) {
       const detached = this.games.filter((g) => g.eveningId === id).map((g) => ({ ...g, eveningId: null }))
-      await this.guard(() => idb.batch([{ store: 'evenings', remove: id }, ...detached.map((g) => ({ store: 'games' as const, put: g }))]))
+      await this.guard(() =>
+        idb.batch([{ store: 'evenings', remove: id }, ...detached.map((g) => ({ store: 'games' as const, put: g }))]),
+      )
       this.evenings = this.evenings.filter((e) => e.id !== id)
-      for (const d of detached) Object.assign(this.games.find((g) => g.id === d.id)!, d)
+      for (const d of detached)
+        Object.assign(
+          this.games.find((g) => g.id === d.id)!,
+          d,
+        )
     },
     eveningGames(id: string): Game[] {
       return this.games.filter((g) => g.eveningId === id).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
@@ -188,10 +215,19 @@ export const useData = defineStore('data', {
       }
       const same = this.games.filter((g) => g.kind === o.kind && g.eveningId === o.eveningId).length
       const g: Game = {
-        id: uid(), kind: o.kind, name: o.name?.trim() || undefined,
+        id: uid(),
+        kind: o.kind,
+        name: o.name?.trim() || undefined,
         autoName: `${GAME_LABELS[o.kind]} — Partie ${same + 1}`,
-        eveningId: o.eveningId, startedAt: now(), endedAt: null, status: 'in_progress',
-        playerIds, teamIds, firstDealerId: o.firstDealerId, rules: JSON.parse(JSON.stringify(o.rules)) as Rules, deals: [],
+        eveningId: o.eveningId,
+        startedAt: now(),
+        endedAt: null,
+        status: 'in_progress',
+        playerIds,
+        teamIds,
+        firstDealerId: o.firstDealerId,
+        rules: JSON.parse(JSON.stringify(o.rules)) as Rules,
+        deals: [],
       }
       await this.guard(() => idb.put('games', g))
       this.games.push(g)
@@ -215,11 +251,19 @@ export const useData = defineStore('data', {
           else g.deals.push(deal)
           return g
         },
-        this.game(gameId)?.deals.some((d) => d.id === deal.id) ? 'Modification d’une donne' : deal.passed ? 'Donne passée' : 'Nouvelle donne',
+        this.game(gameId)?.deals.some((d) => d.id === deal.id)
+          ? 'Modification d’une donne'
+          : deal.passed
+            ? 'Donne passée'
+            : 'Nouvelle donne',
       )
     },
     async deleteDeal(gameId: string, dealId: string) {
-      await this.updateGame(gameId, (g) => ({ ...g, deals: g.deals.filter((d) => d.id !== dealId) }), 'Suppression d’une donne')
+      await this.updateGame(
+        gameId,
+        (g) => ({ ...g, deals: g.deals.filter((d) => d.id !== dealId) }),
+        'Suppression d’une donne',
+      )
     },
     async setStatus(gameId: string, status: GameStatus) {
       await this.updateGame(
@@ -239,7 +283,12 @@ export const useData = defineStore('data', {
     },
     async deleteGame(gameId: string) {
       const dr = this.drafts.filter((d) => d.gameId === gameId)
-      await this.guard(() => idb.batch([{ store: 'games', remove: gameId }, ...dr.map((d) => ({ store: 'drafts' as const, remove: d.key }))]))
+      await this.guard(() =>
+        idb.batch([
+          { store: 'games', remove: gameId },
+          ...dr.map((d) => ({ store: 'drafts' as const, remove: d.key })),
+        ]),
+      )
       this.games = this.games.filter((g) => g.id !== gameId)
       this.drafts = this.drafts.filter((d) => d.gameId !== gameId)
       this.undoStack = this.undoStack.filter((u) => u.gameId !== gameId)
@@ -312,11 +361,18 @@ export const useData = defineStore('data', {
       const prefs = d.preferences ?? defaultPreferences()
       await this.guard(() =>
         idb.replaceAll({
-          players: d.players, teams: d.teams, evenings: d.evenings, games: d.games,
-          drafts: dropDrafts ? [] : this.drafts, meta: [{ key: 'preferences', value: prefs }],
+          players: d.players,
+          teams: d.teams,
+          evenings: d.evenings,
+          games: d.games,
+          drafts: dropDrafts ? [] : this.drafts,
+          meta: [{ key: 'preferences', value: prefs }],
         }),
       )
-      this.players = d.players; this.teams = d.teams; this.evenings = d.evenings; this.games = d.games
+      this.players = d.players
+      this.teams = d.teams
+      this.evenings = d.evenings
+      this.games = d.games
       this.preferences = prefs
       if (dropDrafts) this.drafts = []
       this.undoStack = []
@@ -328,4 +384,9 @@ export const useData = defineStore('data', {
 })
 
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
-const normalize = (s: string): string => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').trim().toLowerCase()
+const normalize = (s: string): string =>
+  s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase()

@@ -14,7 +14,8 @@ export function openDb(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result
       for (const s of STORES) {
-        if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: s === 'drafts' ? 'key' : s === 'meta' ? 'key' : 'id' })
+        if (!db.objectStoreNames.contains(s))
+          db.createObjectStore(s, { keyPath: s === 'drafts' ? 'key' : s === 'meta' ? 'key' : 'id' })
       }
     }
     req.onsuccess = () => resolve(req.result)

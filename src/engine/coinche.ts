@@ -77,9 +77,12 @@ export function scoreCoinche(input: CoincheInput, rules: CoincheRules): TeamDeal
       ? 'Les preneurs ont remporté tous les plis (capot).'
       : `Plis exacts : preneurs ${takerExact}, défense ${defExact} (complément à ${TRICK_TOTAL}).`,
   )
-  if (input.beloteTeam != null) steps.push(`Belote-rebelote (+${BELOTE_POINTS}, jamais multipliée) : ${label(input.beloteTeam)}.`)
+  if (input.beloteTeam != null)
+    steps.push(`Belote-rebelote (+${BELOTE_POINTS}, jamais multipliée) : ${label(input.beloteTeam)}.`)
   steps.push(
-    exactMode ? 'Mode points réels : aucun arrondi.' : 'Mode arrondi : plis arrondis à la dizaine (5 vers le haut), séparément.',
+    exactMode
+      ? 'Mode points réels : aucun arrondi.'
+      : 'Mode arrondi : plis arrondis à la dizaine (5 vers le haut), séparément.',
   )
   if (mult > 1) steps.push(`Multiplicateur ×${mult} (${input.level === 'coinche' ? 'coinché' : 'surcoinché'}).`)
 
@@ -108,7 +111,9 @@ export function scoreCoinche(input: CoincheInput, rules: CoincheRules): TeamDeal
     const v = (base + CAPOT_POINTS) * mult
     score[t] = belote[t]
     score[d] = v + belote[d]
-    steps.push(`Capot annoncé chuté (un pli concédé) : défense (${base} + ${CAPOT_POINTS})${mult > 1 ? ` × ${mult}` : ''} = ${v}.`)
+    steps.push(
+      `Capot annoncé chuté (un pli concédé) : défense (${base} + ${CAPOT_POINTS})${mult > 1 ? ` × ${mult}` : ''} = ${v}.`,
+    )
   } else {
     const contract = input.contract as number
     const takerTotal = takerExact + belote[t]
@@ -121,7 +126,9 @@ export function scoreCoinche(input: CoincheInput, rules: CoincheRules): TeamDeal
       winner = t
       score[t] = (retained[t] + contract) * mult + belote[t]
       score[d] = retained[d] + belote[d]
-      steps.push(`Preneurs : (${retained[t]} + ${contract})${mult > 1 ? ` × ${mult}` : ''} = ${(retained[t] + contract) * mult}. Défense : ${retained[d]} (non multipliés).`)
+      steps.push(
+        `Preneurs : (${retained[t]} + ${contract})${mult > 1 ? ` × ${mult}` : ''} = ${(retained[t] + contract) * mult}. Défense : ${retained[d]} (non multipliés).`,
+      )
     } else {
       outcome = 'fail'
       winner = d

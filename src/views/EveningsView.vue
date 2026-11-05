@@ -13,19 +13,27 @@ const error = ref('')
 const list = computed(() => [...data.evenings].sort((a, b) => b.date.localeCompare(a.date)))
 async function create() {
   error.value = ''
-  if (!date.value) { error.value = 'Indiquez la date de la soirée.'; return }
+  if (!date.value) {
+    error.value = 'Indiquez la date de la soirée.'
+    return
+  }
   try {
     const e = await data.addEvening(name.value, date.value)
     await router.push(`/soiree/${e.id}`)
-  } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
 }
 </script>
 
 <template>
-  <PageHeader title="Soirées" back="/" backLabel="Accueil" />
+  <PageHeader title="Soirées" back="/" back-label="Accueil" />
   <form class="card mb-4 flex flex-col gap-3" @submit.prevent="create">
     <h2 class="text-xl font-bold">Nouvelle soirée</h2>
-    <div><label class="label" for="en">Nom (facultatif)</label><input id="en" v-model="name" class="input" placeholder="Vendredi chez Virginie" /></div>
+    <div>
+      <label class="label" for="en">Nom (facultatif)</label
+      ><input id="en" v-model="name" class="input" placeholder="Vendredi chez Virginie" />
+    </div>
     <div><label class="label" for="ed">Date</label><input id="ed" v-model="date" type="date" class="input" /></div>
     <p v-if="error" class="err" role="alert">{{ error }}</p>
     <button class="btn btn-primary">Créer la soirée</button>
@@ -35,7 +43,11 @@ async function create() {
     <li v-for="e in list" :key="e.id">
       <RouterLink :to="`/soiree/${e.id}`" class="card block">
         <strong>{{ e.name || 'Soirée' }}</strong>
-        <p class="muted">{{ frDate(e.date) }} · {{ data.eveningGames(e.id).length }} partie{{ data.eveningGames(e.id).length > 1 ? 's' : '' }}</p>
+        <p class="muted">
+          {{ frDate(e.date) }} · {{ data.eveningGames(e.id).length }} partie{{
+            data.eveningGames(e.id).length > 1 ? 's' : ''
+          }}
+        </p>
       </RouterLink>
     </li>
   </ul>
