@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import ConfirmHost from './components/ConfirmHost.vue'
+import UpdatePrompt from './components/UpdatePrompt.vue'
 import { useData } from './stores/data'
 
 const data = useData()
@@ -47,5 +48,6 @@ const data = useData()
       </ul>
     </nav>
     <ConfirmHost />
+    <UpdatePrompt />
   </div>
 </template>
