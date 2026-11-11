@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { beloteAnnouncements } from './belote'
+import { beloteAnnouncements, evaluateBeloteAnnouncements } from './belote'
 import { SUITS } from './cards'
 import type { Card, Seat } from './cards'
-import { act, c, lobby, PIDS } from './testkit'
+import { act, c, lobby, PIDS, suitedHands } from './testkit'
 import { buildView } from './views'
 
 function begin(game: 'belote' | 'belote-annonces' = 'belote') {
@@ -75,4 +75,33 @@ describe('belote en ligne', () => {
     })
     expect(beloteAnnouncements(tricks, 'carreau').strongest).toBe('tie')
   })
+})
+
+it('annonce avant le jeu et montre seulement les cartes retenues au deuxième pli', () => {
+  let state = begin('belote-annonces')
+  const round = state.round!
+  round.hands = suitedHands(['coeur', 'pique', 'carreau', 'trefle'])
+  round.contract = { seat: 0, suit: 'coeur', value: 'prise', bidIndex: 0 }
+  round.phase = 'playing'
+  round.announcements = evaluateBeloteAnnouncements(round.hands, 'coeur')
+  const connected = new Set(PIDS)
+  const view = (id: string) => buildView(state, id, connected, 0)
+  const first = view('p0').round!.announcements!
+  expect(first.declared).toHaveLength(4)
+  expect(first.declared.every((entry) => !('cards' in entry))).toBe(true)
+  expect(first.revealed).toEqual([])
+  expect(first.strongest).toBeNull()
+  for (let i = 0; i < 4; i++) {
+    const id = PIDS[state.round!.turn!]
+    state = act(state, id, { type: 'playCard', card: view(id).actions.playable[0] })
+    if (i < 3) expect(view('p0').round!.announcements!.revealed).toEqual([])
+  }
+  for (const id of PIDS) {
+    const shown = view(id).round!.announcements!
+    expect(shown.strongest).toBe(0)
+    expect(shown.revealed.map(({ seat, cards }) => [seat, cards.length])).toEqual([
+      [0, 8],
+      [2, 8],
+    ])
+  }
 })

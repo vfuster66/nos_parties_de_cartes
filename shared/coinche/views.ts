@@ -1,6 +1,7 @@
 // Vues filtrées envoyées aux clients. Construites champ par champ (liste blanche) : on ne copie jamais l'état serveur.
 import { buildTarotView } from '../tarot/views'
 import type { TarotView } from '../tarot/views'
+import type { AnnounceType } from '../../src/engine/belote'
 import type { CoincheLevel } from '../../src/engine/coinche'
 import type { TeamDealDetail } from '../../src/engine/types'
 import { sortHand, teamOf } from './cards'
@@ -57,6 +58,11 @@ export interface RoundView {
   dealer: Seat
   phase: 'bidding' | 'window' | 'playing' | 'summary'
   turn: Seat | null
+  announcements?: {
+    declared: { seat: Seat; kind: AnnounceType }[]
+    revealed: { seat: Seat; kind: AnnounceType; cards: Card[] }[]
+    strongest: TeamIdx | 'tie' | null
+  }
   beloteDeal: { turned: Card; pass: 1 | 2 } | null
   bids: BidEntry[]
   contract: Contract | null
@@ -214,6 +220,16 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
       dealer: r.dealer,
       phase: r.phase,
       turn: r.turn,
+      announcements: r.announcements && {
+        declared: r.announcements.entries.map(({ seat, kind }) => ({ seat, kind })),
+        strongest: r.tricks.length > 0 ? r.announcements.strongest : null,
+        revealed:
+          r.tricks.length > 0
+            ? r.announcements.entries
+                .filter(({ seat }) => teamOf(seat) === r.announcements!.strongest)
+                .map(({ seat, kind, cards }) => ({ seat, kind, cards: cards.map((card) => ({ ...card })) }))
+            : [],
+      },
       beloteDeal: r.beloteDeal ? { turned: { ...r.beloteDeal.turned }, pass: r.beloteDeal.pass } : null,
       bids: r.bids.map((b) => ({ ...b })),
       contract: r.contract && { ...r.contract },

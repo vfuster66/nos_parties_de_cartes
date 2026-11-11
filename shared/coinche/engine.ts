@@ -2,7 +2,7 @@
 // `applyCommand` ne modifie jamais l'état reçu : il renvoie un nouvel état ou lève une RuleError.
 import { playTarot, startTarot } from '../tarot/game'
 import { scoreBelote } from '../../src/engine/belote'
-import { beloteAnnouncements, takeSuits } from './belote'
+import { beloteAnnouncements, evaluateBeloteAnnouncements, takeSuits } from './belote'
 import { scoreCoinche } from '../../src/engine/coinche'
 import type { Command } from '../protocol'
 import { VERSIONED } from '../protocol'
@@ -239,7 +239,9 @@ function endRound(s: MatchState, now: number): void {
           {
             ...common,
             capotTeam: counts[0] === 8 ? 0 : counts[1] === 8 ? 1 : null,
-            ...(announcements ? beloteAnnouncements(r.tricks, c.suit) : { announcements: [{}, {}], strongest: null }),
+            ...(announcements
+              ? (r.announcements ?? beloteAnnouncements(r.tricks, c.suit))
+              : { announcements: [{}, {}], strongest: null }),
           },
           { kind: 'belote', ...rules, announcements },
           { allowFullPoints: true },
@@ -457,6 +459,7 @@ function gameCommand(s: MatchState, seat: Seat | null, cmd: Command, ctx: Ctx): 
         recipient = nextSeat(recipient)
       }
       delete r.beloteDeal
+      if (s.config.game === 'belote-annonces') r.announcements = evaluateBeloteAnnouncements(r.hands, cmd.suit)
       startPlay(r)
       break
     }

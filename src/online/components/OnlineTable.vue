@@ -4,6 +4,7 @@ import type { Card, Seat } from '../../../shared/coinche/cards'
 import { sameCard } from '../../../shared/coinche/cards'
 import type { RoomView } from '../../../shared/coinche/views'
 import { askConfirm } from '../../confirm'
+import { ANNOUNCE_LABELS } from '../../engine/belote'
 import { signed } from '../../labels'
 import { bidText, cardName, contractText, levelText, nameOfSeat, relPos, teamName } from '../labels'
 import { useOnline } from '../store'
@@ -252,6 +253,29 @@ const turnLabel = computed(() => {
     >
       {{ turnLabel }}
     </p>
+
+    <section
+      v-if="round.announcements?.declared.length"
+      class="card flex flex-col gap-2"
+      aria-label="Annonces de belote"
+    >
+      <h2 class="font-bold">Annonces</h2>
+      <ul class="text-sm" data-testid="belote-declarations">
+        <li v-for="(entry, index) in round.announcements.declared" :key="index">
+          {{ nameOfSeat(v, entry.seat) }} · {{ ANNOUNCE_LABELS[entry.kind] }}
+        </li>
+      </ul>
+      <p v-if="round.announcements.strongest === 'tie'">Égalité : aucune annonce retenue.</p>
+      <div v-else-if="round.announcements.revealed.length" data-testid="belote-revealed">
+        <h3 class="font-semibold">Annonces retenues · {{ teamName(v, round.announcements.strongest!) }}</h3>
+        <ul class="space-y-1 text-sm">
+          <li v-for="(entry, index) in round.announcements.revealed" :key="index">
+            {{ nameOfSeat(v, entry.seat) }} · {{ ANNOUNCE_LABELS[entry.kind] }} :
+            {{ entry.cards.map(cardName).join(', ') }}
+          </li>
+        </ul>
+      </div>
+    </section>
 
     <!-- Main -->
     <section v-if="v.hand.length" aria-label="Votre main">

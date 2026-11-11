@@ -1,5 +1,6 @@
 // État complet d'un salon / d'une partie de coinche en ligne. Cet état est PRIVÉ au serveur :
 // les clients ne reçoivent que les vues construites dans views.ts.
+import type { evaluateBeloteAnnouncements } from './belote'
 import type { TarotMatch } from '../tarot/game'
 import type { CoincheLevel } from '../../src/engine/coinche'
 import type { TeamDealDetail } from '../../src/engine/types'
@@ -96,6 +97,7 @@ export interface RoundState {
   phase: 'bidding' | 'window' | 'playing' | 'summary'
   /** PRIVÉ : mains actuelles. */
   hands: Card[][]
+  announcements?: ReturnType<typeof evaluateBeloteAnnouncements>
   beloteDeal?: { turned: Card; remaining: Card[]; pass: 1 | 2 }
   /** PRIVÉ jusqu'à la première annonce : place détenant roi + dame d'atout dans la main initiale. */
   beloteSeat: Seat | null
