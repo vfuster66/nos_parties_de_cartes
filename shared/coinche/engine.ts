@@ -19,7 +19,7 @@ import {
 } from './cards'
 import type { Card, Seat, TeamIdx } from './cards'
 import { legalCards } from './rules'
-import { isOnlineTarot, MAX_BID, MIN_BID, RuleError, SURCOINCHE_WINDOW_MS } from './types'
+import { isOnlineTarot, onlineSeatCount, MAX_BID, MIN_BID, RuleError, SURCOINCHE_WINDOW_MS } from './types'
 import type { BidEntry, Config, MatchState, OnlineGame, Participant, RoundRecord, RoundState } from './types'
 
 export interface Ctx {
@@ -52,7 +52,7 @@ export function newMatch(
     status: 'lobby',
     hostId: host.id,
     participants: [host],
-    seats: game === 'tarot-3' ? [null, null, null] : [null, null, null, null],
+    seats: Array<null>(onlineSeatCount(game)).fill(null),
     readyIds: [],
     config: { ...defaultConfig(), game, target: game === 'coinche' ? 3000 : 1000 },
     totals: [0, 0],
@@ -388,7 +388,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       s.status = 'playing'
       s.startedAt = ctx.now
       s.readyIds = []
-      if (isOnlineTarot(s.config.game)) s.tarot = startTarot(first, ctx.randomInt, s.config.game === 'tarot-3' ? 3 : 4)
+      if (isOnlineTarot(s.config.game)) s.tarot = startTarot(first, ctx.randomInt, onlineSeatCount(s.config.game))
       else startRound(s, first, ctx.randomInt)
       break
     }

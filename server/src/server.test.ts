@@ -5,6 +5,7 @@ import { io as connect } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
 import { afterEach, describe, expect, it } from 'vitest'
 import { nextIntent, seededRandomInt } from '../../shared/coinche/testkit'
+import { onlineSeatCount } from '../../shared/coinche/types'
 import type { OnlineGame } from '../../shared/coinche/types'
 import type { RoomView } from '../../shared/coinche/views'
 import type { SessionGrant } from '../../shared/protocol'
@@ -101,7 +102,7 @@ async function boot(over: { dbPath?: string; now?: () => number; env?: NodeJS.Pr
 
 /** Quatre joueurs dans un salon, assis et prêts ; la partie est démarrée si `start`. */
 async function table(env: Awaited<ReturnType<typeof boot>>, start = true, game?: OnlineGame) {
-  const names = game === 'tarot-3' ? ['Anne', 'Bob', 'Cléo'] : ['Anne', 'Bob', 'Cléo', 'Dan']
+  const names = ['Anne', 'Bob', 'Cléo', 'Dan', 'Emma', 'Fred'].slice(0, onlineSeatCount(game))
   const cs: Client[] = []
   const first = await env.open(names[0])
   const created = await first.call('room:create', { nickname: names[0], ...(game ? { game } : {}) })
@@ -834,13 +835,14 @@ describe('mémoire : salons terminés', () => {
   })
 })
 
-it.each(['tarot', 'tarot-3'] as const)(
+it.each(['tarot', 'tarot-3', 'tarot-5', 'tarot-6'] as const)(
   'joue une garde sans en %s et retrouve la donne après reconnexion',
   async (game) => {
     const env = await boot()
     const clients = await table(env, true, game)
     const count = clients.length
-    const handSize = 72 / count
+    const active = count === 6 ? 5 : count
+    const handSize = active === 5 ? 15 : 72 / active
     expect(clients[0].view?.tarot?.hand).toHaveLength(handSize)
     expect(clients[0].view?.seats).toHaveLength(count)
     let version = clients[0].view!.version
@@ -853,9 +855,31 @@ it.each(['tarot', 'tarot-3'] as const)(
       version = response.version!
     }
     await send('tarotBid', { contract: 'gardeSans' })
-    for (let i = 1; i < count; i++) await send('pass')
-    for (let i = 0; i < count; i++) await send('tarotDeclare', { types: [], shown: [] })
-    for (let i = 0; i < 72; i++) {
+    for (let i = 1; i < active; i++) await send('pass')
+    const bidding = await clients[0].waitFor((view) => view.version >= version)
+    const taker = bidding.tarot!.taker!
+    const restingSeat = bidding.tarot!.restingSeat
+    if (restingSeat !== null) {
+      const resting = await clients[restingSeat].waitFor((view) => view.version >= version)
+      expect(resting.tarot!.hand).toEqual([])
+      expect((await clients[restingSeat].cmd('tarotBid', { contract: 'gardeContre' })).ok).toBe(false)
+    }
+    let expectedPartner: number | null = null
+    if (active === 5) {
+      const views = await Promise.all(clients.map((client) => client.waitFor((view) => view.version >= version)))
+      const choices = views[taker].tarot!.actions.calls
+      const card = choices.find((choice) =>
+        views.some((view, index) => index !== taker && view.tarot!.hand.includes(choice)),
+      )!
+      expectedPartner = views.findIndex((view, index) => index !== taker && view.tarot!.hand.includes(card))
+      expect(expectedPartner).toBeGreaterThanOrEqual(0)
+      await send('tarotCall', { card })
+      const called = await clients[0].waitFor((view) => view.version >= version)
+      expect(called.tarot?.calledCard).toBe(card)
+      expect(called.tarot?.partner).toBeNull()
+    }
+    for (let i = 0; i < active; i++) await send('tarotDeclare', { types: [], shown: [] })
+    for (let i = 0; i < active * handSize; i++) {
       const { tarot } = await clients[0].waitFor((view) => view.version >= version)
       const current = await clients[tarot!.turn].waitFor((view) => view.version >= version)
       expect(current.tarot?.dog).toEqual([])
@@ -866,7 +890,10 @@ it.each(['tarot', 'tarot-3'] as const)(
     expect(final.tarot?.trickCount).toBe(handSize)
     const contractDelta = final.tarot!.detail!.score.contractDelta
     const value = final.tarot!.detail!.score.value
-    expect(contractDelta[final.tarot!.taker!]).toBe((count - 1) * value)
+    expect(final.tarot!.partner).toBe(expectedPartner)
+    expect(contractDelta[taker]).toBe((active === 5 ? 2 : active - 1) * value)
+    if (expectedPartner !== null) expect(contractDelta[expectedPartner]).toBe(value)
+    if (restingSeat !== null) expect(final.tarot!.detail!.score.delta[restingSeat]).toBe(0)
     expect(contractDelta.reduce((sum, points) => sum + points, 0)).toBe(0)
     const disconnected = clients[count - 1]
     disconnected.socket.disconnect()
@@ -875,5 +902,17 @@ it.each(['tarot', 'tarot-3'] as const)(
     expect((await back.call('room:resume', creds(disconnected.grant!))).ok).toBe(true)
     const resumed = await back.waitFor((view) => view.tarot?.phase === 'summary')
     expect(resumed.tarot?.totals).toEqual(final.tarot?.totals)
+    if (restingSeat !== null) {
+      const players = [...clients.slice(0, -1), back]
+      for (const client of players) {
+        await client.waitFor((view) => view.version >= version && !view.pause)
+        const reply = await client.cmd('nextRound')
+        expect(reply.ok).toBe(true)
+        version = reply.version!
+      }
+      const next = await players[0].waitFor((view) => view.version >= version && view.tarot?.phase === 'bidding')
+      expect(next.tarot!.restingSeat).not.toBe(restingSeat)
+      expect(next.tarot!.restingSeat).toBe(next.tarot!.dealer)
+    }
   },
 )

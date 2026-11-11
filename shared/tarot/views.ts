@@ -1,20 +1,32 @@
-import { CONTRACTS, HANDFUL_SIZES, tarotDeclarations } from './game'
+import { CONTRACTS, HANDFUL_SIZES, playableTarotCards, tarotCalls, tarotDeclarations } from './game'
 import type { TarotMatch } from './game'
 import type { Seat } from '../coinche/cards'
-import { discardableTarotCards, legalTarotCards } from './cards'
+import { activeTarotCount, discardableTarotCards, tarotHandSize } from './cards'
+
+import type { TarotPlayerCount } from './cards'
 
 export type TarotView = ReturnType<typeof buildTarotView>
 
 export function buildTarotView(game: TarotMatch, seat: Seat | null, disabled: boolean) {
   const r = game.round
-  const playerCount = game.totals.length === 3 ? 3 : 4
+  const playerCount = game.totals.length as TarotPlayerCount
   const hand = seat == null ? [] : r.hands[seat]
   const active = !disabled && seat != null && r.turn === seat
   const dogPublic = (r.contract === 'pousse' || r.contract === 'garde') && r.phase !== 'bidding'
   return {
     phase: r.phase,
-    trickLimit: 72 / playerCount,
-    handfulSizes: HANDFUL_SIZES[playerCount],
+    trickLimit: tarotHandSize(playerCount),
+    handfulSizes: HANDFUL_SIZES[activeTarotCount(playerCount)],
+    dogSize: r.dog.length,
+    restingSeat: playerCount === 6 ? r.dealer : null,
+    calledCard: r.calledCard ?? null,
+    partner:
+      r.phase === 'summary' ||
+      (r.calledCard &&
+        (r.trick.some(({ card }) => card === r.calledCard) ||
+          r.tricks.some(({ plays }) => plays.some(({ card }) => card === r.calledCard))))
+        ? (r.partner ?? null)
+        : null,
     dealer: r.dealer,
     turn: r.turn,
     taker: r.taker,
@@ -34,10 +46,11 @@ export function buildTarotView(game: TarotMatch, seat: Seat | null, disabled: bo
     actions: {
       canPass: active && r.phase === 'bidding',
       bids: active && r.phase === 'bidding' ? CONTRACTS.slice(r.contract ? CONTRACTS.indexOf(r.contract) + 1 : 0) : [],
-      discard: active && r.phase === 'discard' ? discardableTarotCards(hand, 6) : [],
+      calls: active && r.phase === 'call' ? tarotCalls(hand) : [],
+      discard: active && r.phase === 'discard' ? discardableTarotCards(hand, r.dog.length) : [],
       canDeclare: active && r.phase === 'declare',
       declarations: active && r.phase === 'declare' ? tarotDeclarations(hand, seat === r.taker, playerCount) : [],
-      playable: active && r.phase === 'playing' ? legalTarotCards(hand, r.trick) : [],
+      playable: active && r.phase === 'playing' ? playableTarotCards(r, seat!) : [],
       next: !disabled && seat != null && r.phase === 'summary' && !r.ready.includes(seat),
     },
   }

@@ -9,7 +9,7 @@ export interface Card {
   suit: Suit
   rank: Rank
 }
-export type Seat = 0 | 1 | 2 | 3
+export type Seat = 0 | 1 | 2 | 3 | 4 | 5
 export type TeamIdx = 0 | 1
 export const SEATS: readonly Seat[] = [0, 1, 2, 3]
 

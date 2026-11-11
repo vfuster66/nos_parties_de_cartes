@@ -202,7 +202,7 @@ const turnLabel = computed(() => {
         <p class="text-xs">
           <span v-if="round.dealer === bySlot[slot]" class="rounded bg-white/20 px-1">Donneur</span>
           <span v-if="contract?.seat === bySlot[slot]" class="rounded bg-amber-500 px-1 text-black">Preneur</span>
-          <span v-if="slot !== 0 && round.phase !== 'summary'"> 🂠 ×{{ round.cardsLeft[bySlot[slot]] }}</span>
+          <span v-if="slot !== 0 && round.phase !== 'summary'"> 🂠 ×{{ round.cardsLeft.at(bySlot[slot]) }}</span>
         </p>
       </div>
       <!-- Cartes du pli, placées côté de leur auteur -->

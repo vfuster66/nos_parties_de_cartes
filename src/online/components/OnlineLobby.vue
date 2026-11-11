@@ -207,9 +207,7 @@ async function closeRoom(): Promise<void> {
       <h2 id="rules-title" class="mb-2 text-xl font-bold">
         {{
           tarot
-            ? seats.length === 3
-              ? 'Tarot à trois'
-              : 'Tarot à quatre'
+            ? 'Tarot à ' + seats.length + ' joueurs'
             : view.config.game === 'belote-annonces'
               ? 'Belote avec annonces'
               : view.config.game === 'belote'

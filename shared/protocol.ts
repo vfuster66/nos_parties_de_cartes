@@ -1,7 +1,7 @@
 // Protocole client ↔ serveur. Les schémas Zod valident TOUT ce que le serveur reçoit.
 import { z } from 'zod'
 
-const seat = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+const seat = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
 const suit = z.enum(['pique', 'coeur', 'trefle', 'carreau'])
 const rank = z.enum(['7', '8', '9', '10', 'V', 'D', 'R', 'A'])
 const card = z.object({ suit, rank }).strict()
@@ -62,7 +62,8 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('pass', {}),
   cmd('take', { suit }),
   cmd('tarotBid', { contract: z.enum(['pousse', 'garde', 'gardeSans', 'gardeContre']) }),
-  cmd('tarotDiscard', { cards: z.array(tarotCard).length(6) }),
+  cmd('tarotCall', { card: tarotCard }),
+  cmd('tarotDiscard', { cards: z.union([z.array(tarotCard).length(3), z.array(tarotCard).length(6)]) }),
   cmd('tarotDeclare', {
     types: z
       .array(
@@ -98,6 +99,7 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
   'take',
   'tarotBid',
   'tarotDiscard',
+  'tarotCall',
   'tarotDeclare',
   'tarotPlay',
   'tarotFinish',
@@ -111,7 +113,7 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
 export const createRoomSchema = z
   .object({
     nickname: nicknameSchema,
-    game: z.enum(['coinche', 'belote', 'belote-annonces', 'tarot', 'tarot-3']).optional(),
+    game: z.enum(['coinche', 'belote', 'belote-annonces', 'tarot', 'tarot-3', 'tarot-5', 'tarot-6']).optional(),
   })
   .strict()
 export const joinRoomSchema = z.object({ code: z.string().max(32), nickname: nicknameSchema }).strict()

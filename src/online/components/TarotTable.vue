@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import type { Seat } from '../../../shared/coinche/cards'
 import type { RoomView } from '../../../shared/coinche/views'
 import type { TarotCard } from '../../../shared/tarot/cards'
 import { isTrump } from '../../../shared/tarot/cards'
@@ -60,11 +61,11 @@ const sortedHand = computed(() =>
     return suits.indexOf(aSuit) - suits.indexOf(bSuit) || rank(bRank) - rank(aRank)
   }),
 )
-const player = (seat: 0 | 1 | 2 | 3) => nameOfSeat(props.view, seat)
+const player = (seat: Seat) => nameOfSeat(props.view, seat)
 const results = computed(() =>
   tarot.value.totals
     .map((score, seat) => ({
-      name: player(seat as 0 | 1 | 2 | 3),
+      name: player(seat as Seat),
       score,
       delta: tarot.value.detail?.score.delta[seat],
     }))
@@ -84,13 +85,19 @@ async function abandon() {
 
 <template>
   <main class="flex flex-col gap-3" data-testid="tarot-table">
-    <h1 class="text-xl font-bold">Tarot à {{ view.seats.length === 3 ? 'trois' : 'quatre' }}</h1>
+    <h1 class="text-xl font-bold">Tarot à {{ view.seats.length }} joueurs</h1>
     <p v-if="view.pause" class="note" role="status">{{ view.pause.reason }}</p>
     <p v-if="online.error" class="err" role="alert">{{ online.error }}</p>
     <section class="card flex flex-col gap-2">
       <p v-if="!active" class="font-bold">{{ view.status === 'abandoned' ? 'Partie abandonnée' : 'Résultat final' }}</p>
       <p v-if="tarot.contract && tarot.taker !== null">
         {{ TAROT_CONTRACT_LABELS[tarot.contract] }} · {{ player(tarot.taker) }}
+      </p>
+      <p v-if="tarot.restingSeat !== null">Donneur au repos · {{ player(tarot.restingSeat) }}</p>
+      <p v-if="tarot.calledCard">
+        Carte appelée · {{ label(tarot.calledCard) }}
+        <template v-if="tarot.partner !== null"> · Appelé : {{ player(tarot.partner) }}</template>
+        <template v-else-if="tarot.phase === 'summary'"> · Le preneur joue seul</template>
       </p>
       <p v-if="active && tarot.phase !== 'summary'">
         Au tour de <strong>{{ player(tarot.turn) }}</strong>
@@ -122,16 +129,28 @@ async function abandon() {
       </button>
       <button v-if="tarot.actions.canPass" class="btn" :disabled="busy" @click="online.send('pass')">Passer</button>
     </section>
+    <section v-if="active && tarot.phase === 'call'" class="card flex flex-col gap-2">
+      <h2 class="font-bold">Appel</h2>
+      <button
+        v-for="card in tarot.actions.calls"
+        :key="card"
+        class="btn"
+        :disabled="busy"
+        @click="online.send('tarotCall', { card })"
+      >
+        Appeler {{ label(card) }}
+      </button>
+    </section>
     <section v-if="active && tarot.phase === 'discard'" class="card">
       <h2 class="font-bold">Chien et écart</h2>
       <p>Chien · {{ tarot.dog.map(label).join(' · ') }}</p>
       <button
         v-if="tarot.actions.discard.length"
         class="btn"
-        :disabled="selected.length !== 6 || busy"
+        :disabled="selected.length !== tarot.dogSize || busy"
         @click="online.send('tarotDiscard', { cards: selected })"
       >
-        Valider l’écart ({{ selected.length }}/6)
+        Valider l’écart ({{ selected.length }}/{{ tarot.dogSize }})
       </button>
     </section>
     <section v-if="active && tarot.actions.canDeclare" class="card flex flex-col gap-2">

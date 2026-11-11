@@ -2,6 +2,7 @@ import { io } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
+import type { OnlineGame } from '../../shared/coinche/types'
 import type { RoomView } from '../../shared/coinche/views'
 import type { Ack, CommandType, SessionGrant } from '../../shared/protocol'
 import { onlineServerUrl } from './config'
@@ -113,10 +114,7 @@ export const useOnline = defineStore('online', () => {
     connection.value = 'online'
   }
 
-  async function createRoom(
-    nickname: string,
-    game: 'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3' = 'coinche',
-  ): Promise<string | null> {
+  async function createRoom(nickname: string, game: OnlineGame = 'coinche'): Promise<string | null> {
     error.value = null
     try {
       await connectNow()

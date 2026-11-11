@@ -99,3 +99,47 @@ it('refuse la quatrième place et le quatrième donneur au tarot à trois', () =
   expect(() => act(state, 'p0', { type: 'assignSeat', participantId: 'p0', seat: 3 })).toThrow()
   expect(() => act(state, 'p0', { type: 'configure', firstDealer: 3 })).toThrow()
 })
+
+it.each(['self_call', 'king_in_dog'] as const)('joue seul à cinq dans le cas %s', (reason) => {
+  const playerIds = ['p0', 'p1', 'p2', 'p3', 'p4']
+  let state = newMatch('room', 'ABCDEFGH', { id: 'p0', nickname: 'Anne', joinedAt: 0 }, 0, 'tarot-5')
+  state.participants.push(...playerIds.slice(1).map((id) => ({ id, nickname: id, joinedAt: 0 })))
+  state.seats = playerIds
+  state.readyIds = [...playerIds]
+  state.config.firstDealer = 4
+  state = act(state, 'p0', { type: 'start' })
+  const taker = state.tarot!.round.turn
+  const pid = playerIds[taker]
+  const round = state.tarot!.round
+  const king = 'coeur:R'
+  // Place le roi dans la main du preneur ou au chien sans dupliquer la carte.
+  const piles = [...round.hands, round.dog]
+  const source = piles.find((pile) => pile.includes(king))!
+  const destination = reason === 'self_call' ? round.hands[taker] : round.dog
+  if (source !== destination) {
+    const index = source.indexOf(king)
+    source[index] = destination[0]
+    destination[0] = king
+  }
+  state = act(state, pid, { type: 'tarotBid', contract: 'garde' })
+  for (let i = 0; i < 4; i++) state = act(state, playerIds[state.tarot!.round.turn], { type: 'pass' })
+  state = act(state, pid, { type: 'tarotCall', card: king })
+  expect(state.tarot!.round.partner).toBeNull()
+  const connected = new Set(playerIds)
+  const view = (seat: Seat) => buildView(state, playerIds[seat], connected, 0).tarot!
+  expect(view(taker).dog).toHaveLength(3)
+  expect(view(taker).hand).toHaveLength(18)
+  const cards = view(taker).actions.discard
+  expect(() => act(state, pid, { type: 'tarotDiscard', cards: cards.slice(0, 6) })).toThrow()
+  state = act(state, pid, { type: 'tarotDiscard', cards: cards.slice(0, 3) })
+  expect(view(taker).hand).toHaveLength(15)
+  for (let i = 0; i < 5; i++)
+    state = act(state, playerIds[state.tarot!.round.turn], { type: 'tarotDeclare', types: [], shown: [] })
+  for (let i = 0; i < 75; i++) {
+    const seat = state.tarot!.round.turn
+    state = act(state, playerIds[seat], { type: 'tarotPlay', card: view(seat).actions.playable[0] })
+  }
+  const score = state.tarot!.round.detail!.score
+  expect(score.contractDelta[taker]).toBe(4 * score.value)
+  expect(score.delta.reduce((total, value) => total + value, 0)).toBe(0)
+})

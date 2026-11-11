@@ -16,9 +16,13 @@ export interface Participant {
   joinedAt: number
 }
 
-export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3'
+export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3' | 'tarot-5' | 'tarot-6'
 
-export const isOnlineTarot = (game?: OnlineGame): boolean => game === 'tarot' || game === 'tarot-3'
+export const isOnlineTarot = (game?: OnlineGame): boolean =>
+  game === 'tarot' || game === 'tarot-3' || game === 'tarot-5' || game === 'tarot-6'
+
+export const onlineSeatCount = (game?: OnlineGame): 3 | 4 | 5 | 6 =>
+  game === 'tarot-3' ? 3 : game === 'tarot-5' ? 5 : game === 'tarot-6' ? 6 : 4
 
 export interface Config {
   game?: OnlineGame
