@@ -38,12 +38,23 @@ function setLevel(l: CoincheForm['level']) {
           { value: 'capot', label: 'Capot annoncé' },
         ]"
       />
-      <div v-if="f.contractMode === 'num'">
-        <label class="label" for="ctr">Contrat (80 à 160, par 10)</label>
-        <select id="ctr" v-model="f.contract" class="input">
-          <option v-for="c in contracts" :key="c" :value="String(c)">{{ c }}</option>
-        </select>
-      </div>
+      <fieldset v-if="f.contractMode === 'num'">
+        <legend class="label">Contrat</legend>
+        <div class="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Valeur du contrat">
+          <button
+            v-for="c in contracts"
+            :key="c"
+            type="button"
+            role="radio"
+            :aria-checked="f.contract === String(c)"
+            class="btn !px-0"
+            :class="f.contract === String(c) ? 'btn-primary' : ''"
+            @click="f.contract = String(c)"
+          >
+            {{ c }}
+          </button>
+        </div>
+      </fieldset>
       <SegmentedChoice
         :model-value="f.level"
         label="Coinche"

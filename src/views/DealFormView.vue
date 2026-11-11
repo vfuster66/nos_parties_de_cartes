@@ -89,6 +89,16 @@ const preview = computed(() => {
   const rows = computeGame({ ...g, deals }).rows
   return rows[existing.value ? dealIndex.value : rows.length - 1]
 })
+const liveDelta = computed(() => {
+  const g = game.value
+  const row = preview.value
+  if (!g || !row) return []
+  const delta = row.teamDetail?.delta ?? row.tarotDetail?.delta ?? []
+  return delta.map((d, i) => ({
+    label: row.teamDetail ? data.gameTeamName(g, i as 0 | 1) : data.playerName(g.playerIds[i]),
+    value: d > 0 ? `+${d}` : String(d),
+  }))
+})
 const errors = computed(() =>
   parsed.value.errors.length ? parsed.value.errors : preview.value?.error ? [preview.value.error] : [],
 )
@@ -139,7 +149,15 @@ async function discard() {
       Après validation, toutes les donnes suivantes (scores, réserves, résultat, statistiques) seront recalculées.
     </p>
     <form class="flex flex-col gap-4" @submit.prevent="save">
-      <PlayerSelect v-model="dealerId" label="Donneur de cette donne" :ids="game.playerIds" />
+      <details class="rounded-xl border border-stone-300 bg-white px-3 py-2">
+        <summary class="cursor-pointer text-base font-semibold">
+          Donneur : <span class="font-bold">{{ data.playerName(dealerId) }}</span>
+          <span class="muted !text-sm"> · changer</span>
+        </summary>
+        <div class="mt-2">
+          <PlayerSelect v-model="dealerId" label="Donneur de cette donne" :ids="game.playerIds" tiles />
+        </div>
+      </details>
       <p v-if="game.playerIds.length === 6" class="note">
         Le donneur est au repos : il ne peut être ni preneur, ni appelé, ni bénéficiaire de prime.
       </p>
@@ -148,9 +166,20 @@ async function discard() {
       <TarotFields v-else v-model="form as TarotForm" :active="active" />
 
       <section class="card" aria-labelledby="prev-h" aria-live="polite">
-        <h2 id="prev-h" class="mb-2 text-xl font-bold">Aperçu du calcul</h2>
+        <h2 id="prev-h" class="mb-2 text-xl font-bold">Résultat de la donne</h2>
         <ErrorList :errors="errors" />
-        <DealBreakdown v-if="preview && !errors.length" :game="game" :row="preview" />
+        <template v-if="preview && !errors.length">
+          <p class="grid grid-cols-2 gap-2 text-center" data-testid="live-result">
+            <span v-for="(d, i) in liveDelta" :key="i" class="rounded-xl bg-teal-50 p-2">
+              <span class="block truncate text-sm">{{ d.label }}</span>
+              <span class="block text-2xl font-bold">{{ d.value }}</span>
+            </span>
+          </p>
+          <details class="mt-2">
+            <summary class="btn w-full">🔎 Détail du calcul</summary>
+            <div class="mt-2"><DealBreakdown :game="game" :row="preview" /></div>
+          </details>
+        </template>
         <p v-else-if="!errors.length" class="muted">Remplissez la donne pour voir le calcul.</p>
       </section>
 

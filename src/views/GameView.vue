@@ -177,6 +177,15 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
           </p>
         </div>
         <p class="text-4xl font-extrabold tabular-nums" :aria-label="`${e.title} : ${e.total} points`">{{ e.total }}</p>
+        <div v-if="game.rules.kind !== 'tarot'" class="mt-2 text-left">
+          <div class="h-2 overflow-hidden rounded-full bg-stone-200" aria-hidden="true">
+            <div
+              class="h-full bg-teal-600"
+              :style="{ width: Math.min(100, Math.max(0, (e.total / game.rules.target) * 100)) + '%' }"
+            />
+          </div>
+          <p class="text-center text-xs text-slate-600">objectif {{ game.rules.target }}</p>
+        </div>
       </div>
     </section>
 
@@ -197,9 +206,16 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
 
     <div class="mb-4 flex flex-col gap-2">
       <template v-if="editable">
-        <RouterLink :to="`/partie/${id}/donne`" class="btn btn-primary !min-h-14 text-xl">{{
-          hasDraft ? 'Reprendre la saisie' : '＋ Saisir une donne'
-        }}</RouterLink>
+        <div
+          class="sticky bottom-[4.25rem] z-10 -mx-1 rounded-2xl bg-paper/95 p-1 shadow-[0_-6px_12px_-8px_rgb(0_0_0/0.3)]"
+        >
+          <RouterLink
+            :to="`/partie/${id}/donne`"
+            class="btn btn-primary w-full !min-h-14 text-xl"
+            data-testid="add-deal"
+            >{{ hasDraft ? 'Reprendre la saisie' : '＋ Saisir une donne' }}</RouterLink
+          >
+        </div>
         <div class="grid grid-cols-2 gap-2">
           <button class="btn" @click="pass">⏭ Donne passée</button>
           <button class="btn" :disabled="!undo" @click="run(() => data.undo(id))">
