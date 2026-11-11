@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { forgetSession } from '../online/local'
 import OnlineLobby from '../online/components/OnlineLobby.vue'
@@ -16,6 +16,23 @@ onMounted(async () => {
   if (online.view?.roomId !== props.roomId) await online.resume(props.roomId)
 })
 onBeforeUnmount(() => online.leaveScreen())
+// Après une coupure : on dit clairement que la place est conservée, puis où en est la partie.
+const wasOffline = ref(false)
+const reconnected = ref(false)
+let toast: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => online.connection,
+  (c) => {
+    if (c === 'offline') wasOffline.value = true
+    else if (c === 'online' && wasOffline.value) {
+      wasOffline.value = false
+      reconnected.value = true
+      if (toast) clearTimeout(toast)
+      toast = setTimeout(() => (reconnected.value = false), 5000)
+    }
+  },
+)
+onBeforeUnmount(() => toast && clearTimeout(toast))
 const view = computed(() => (online.view?.roomId === props.roomId ? online.view : null))
 function dropAndLeave(): void {
   forgetSession(props.roomId)
@@ -24,7 +41,7 @@ function dropAndLeave(): void {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg">
+  <div class="mx-auto max-w-lg" :class="online.connection === 'offline' ? '[&_button]:pointer-events-none' : ''">
     <div v-if="online.connection === 'replaced'" class="err" role="alert">
       <p class="font-bold">Session ouverte ailleurs</p>
       <p>Ce salon a été repris depuis un autre onglet ou appareil. Cette fenêtre ne peut plus jouer.</p>
@@ -52,6 +69,25 @@ function dropAndLeave(): void {
       }}
     </p>
     <template v-else>
+      <div
+        v-if="online.connection === 'offline' || online.connection === 'connecting'"
+        class="sticky top-0 z-40 mb-2 rounded-xl border-2 border-amber-600 bg-amber-100 p-2.5 text-center text-base font-semibold text-amber-950 shadow"
+        role="alert"
+        data-testid="offline-banner"
+      >
+        📡 Connexion perdue — reconnexion en cours…
+        <span class="block text-sm font-normal"
+          >Votre place est gardée. Les boutons sont désactivés jusqu’au retour du réseau.</span
+        >
+      </div>
+      <p
+        v-else-if="reconnected"
+        class="sticky top-0 z-40 mb-2 rounded-xl border-2 border-teal-700 bg-teal-100 p-2.5 text-center text-base font-semibold text-teal-950 shadow"
+        role="status"
+        data-testid="reconnected-banner"
+      >
+        ✓ Reconnecté — la partie est à jour.
+      </p>
       <OnlineLobby v-if="view.status === 'lobby'" :view="view" @left="router.push('/en-ligne')" />
       <TarotTable v-else-if="view.tarot" :view="view" />
       <OnlineTable v-else-if="view.status === 'playing'" :view="view" />

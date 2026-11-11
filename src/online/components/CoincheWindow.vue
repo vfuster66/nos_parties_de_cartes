@@ -34,11 +34,11 @@ const pct = computed(() => Math.round((remaining.value / 10000) * 100))
 
 <template>
   <section
-    class="card flex flex-col gap-3 border-2 border-red-700"
+    class="card flex flex-col gap-3 !border-2 !border-red-700 !bg-red-50"
     aria-labelledby="win-title"
     data-testid="coinche-window"
   >
-    <h2 id="win-title" class="text-lg font-bold">Contrat coinché</h2>
+    <h2 id="win-title" class="text-lg font-bold text-red-800">⚡ Contrat coinché</h2>
     <p>
       {{ contractText(view.round!.contract) }} de {{ nameOfSeat(view, view.round!.contract!.seat) }} est coinché.
       <template v-if="isTaker">Vous pouvez surcoincher (×3) ou accepter.</template>
