@@ -1,11 +1,35 @@
 @import 'tailwindcss';
 
+/* Direction visuelle : tapis de jeu vert, papier crème, filet doré. Le vert remplace le « teal » historique,
+   ce qui recolore d'un coup tous les écrans qui l'utilisaient. */
+@theme {
+  --color-teal-50: #eef6f0;
+  --color-teal-100: #dcebe0;
+  --color-teal-200: #bcd8c5;
+  --color-teal-300: #8fbfa1;
+  --color-teal-400: #5ea27a;
+  --color-teal-500: #3a8760;
+  --color-teal-600: #2c744f;
+  --color-teal-700: #1f5f40;
+  --color-teal-800: #174a32;
+  --color-teal-900: #0f3523;
+  --color-felt: #1c5a3d;
+  --color-felt-dark: #123f2a;
+  --color-paper: #f7f3ea;
+  --color-gold: #c9962b;
+  --color-gold-soft: #f6e6bd;
+  --color-suit-red: #b3261e;
+  --color-suit-black: #1b2420;
+  --color-trump: #27407a;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
 body {
-  @apply bg-slate-50 text-slate-900 text-lg;
+  @apply bg-paper text-lg text-slate-900;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 * {
   min-width: 0;
@@ -16,13 +40,16 @@ body {
     @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-base font-semibold text-slate-900 active:bg-slate-100 disabled:opacity-50;
   }
   .btn-primary {
-    @apply border-teal-800 bg-teal-700 text-white active:bg-teal-800;
+    @apply border-teal-900 bg-teal-700 text-white active:bg-teal-800;
   }
   .btn-danger {
     @apply border-red-800 bg-red-700 text-white active:bg-red-800;
   }
+  .btn-gold {
+    @apply border-amber-700 bg-gold text-slate-900 active:bg-amber-500;
+  }
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
+    @apply rounded-2xl border border-stone-300 bg-white p-4 shadow-sm;
   }
   .input {
     @apply min-h-12 w-full rounded-xl border-2 border-slate-400 bg-white px-3 py-2 text-lg;
@@ -42,8 +69,80 @@ body {
   .muted {
     @apply text-base text-slate-600;
   }
+  /* Bandeau de titre des sections de jeu. */
+  .eyebrow {
+    @apply text-sm font-bold uppercase tracking-wide text-teal-800;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-stone-300 bg-white px-2.5 py-0.5 text-sm font-semibold;
+  }
+  /* Pastille d'état : toujours un texte ou un symbole en plus de la couleur. */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold;
+  }
 }
+
 :focus-visible {
-  outline: 3px solid #0f766e;
+  outline: 3px solid #c9962b;
   outline-offset: 2px;
+}
+/* Sur fond vert, le filet doré reste visible ; sur fond clair, on le double d'un liseré sombre. */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #0f3523;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #f6e6bd;
+}
+
+/* Animations d'aide au suivi de la donne : jamais bloquantes, coupées si le mouvement réduit est demandé. */
+@keyframes card-drop {
+  from {
+    opacity: 0;
+    transform: translate(var(--from-x, 0), var(--from-y, 24px)) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes turn-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(201 150 43 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgb(201 150 43 / 0);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.anim-drop {
+  animation: card-drop 0.22s ease-out both;
+}
+.anim-turn {
+  animation: turn-pulse 1.6s ease-in-out infinite;
+}
+.anim-sheet {
+  animation: sheet-up 0.18s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
