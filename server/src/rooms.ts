@@ -227,6 +227,7 @@ export class RoomManager {
       this.genCode(),
       { id: pid, nickname: p.data.nickname, joinedAt: now },
       now,
+      p.data.game,
     )
     this.d.store.db.transaction(() => {
       this.d.store.insertRoom(state, now)

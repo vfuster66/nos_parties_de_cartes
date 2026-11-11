@@ -5,7 +5,7 @@ import type { Suit } from '../../../shared/coinche/cards'
 import type { RoomView } from '../../../shared/coinche/views'
 import { askConfirm } from '../../confirm'
 import { SUIT_LABELS, SUIT_SYMBOLS } from '../../engine/types'
-import { bidText, contractText, levelText, nameOfSeat, suitText } from '../labels'
+import { bidText, cardName, contractText, levelText, nameOfSeat, suitText } from '../labels'
 import { useOnline } from '../store'
 
 const props = defineProps<{ view: RoomView }>()
@@ -67,8 +67,11 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
 
 <template>
   <section class="card flex flex-col gap-3" aria-labelledby="bid-title" data-testid="bidding">
-    <h2 id="bid-title" class="text-lg font-bold">Enchères</h2>
-    <p v-if="round.contract" class="font-semibold" data-testid="current-contract">
+    <h2 id="bid-title" class="text-lg font-bold">{{ round.beloteDeal ? 'Prise d’atout' : 'Enchères' }}</h2>
+    <p v-if="round.beloteDeal">
+      Carte retournée : {{ cardName(round.beloteDeal.turned) }} · Tour {{ round.beloteDeal.pass }}/2
+    </p>
+    <p v-else-if="round.contract" class="font-semibold" data-testid="current-contract">
       Contrat : {{ contractText(round.contract) }} par {{ nameOfSeat(view, round.contract.seat) }}
     </p>
     <p v-else class="muted">Aucune enchère pour l’instant.</p>
@@ -86,6 +89,15 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
 
     <template v-if="myTurn && !view.pause">
       <p class="font-semibold text-teal-900" role="status">C’est à vous de parler.</p>
+      <button
+        v-for="candidate in a.takeSuits"
+        :key="candidate"
+        class="btn btn-primary"
+        :disabled="busy"
+        @click="online.send('take', { suit: candidate })"
+      >
+        Prendre à {{ suitText(candidate) }}
+      </button>
       <div v-if="a.bid">
         <p class="label">Valeur</p>
         <div class="grid grid-cols-3 gap-2" role="group" aria-label="Valeur du contrat">

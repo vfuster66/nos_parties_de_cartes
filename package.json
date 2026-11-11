@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:server": "tsx watch server/src/index.ts",
     "dev:online": "concurrently -k -n serveur,client -c blue,green \"npm:dev:server\" \"VITE_ONLINE_SERVER_URL=same-origin vite\"",
-    "dev:lan": "concurrently -k -n serveur,client -c blue,green \"ALLOW_PRIVATE_NETWORK_ORIGINS=1 npm:dev:server\" \"VITE_ONLINE_SERVER_URL=same-origin vite --host\"",
+    "dev:lan": "concurrently -k -n serveur,client -c blue,green \"ALLOW_PRIVATE_NETWORK_ORIGINS=1 npm run dev:server\" \"VITE_ONLINE_SERVER_URL=same-origin vite --host\"",
     "build": "vue-tsc --noEmit && vite build",
     "build:server": "tsc -p tsconfig.server.json && esbuild server/src/index.ts server/src/backup.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outdir=server/dist --out-extension:.js=.mjs",
     "build:all": "npm run build && npm run build:server",

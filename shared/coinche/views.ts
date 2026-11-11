@@ -4,6 +4,7 @@ import type { TeamDealDetail } from '../../src/engine/types'
 import { sortHand, teamOf } from './cards'
 import type { Card, Seat, Suit, TeamIdx, TrickCard } from './cards'
 import { isPaused, seatOf } from './engine'
+import { takeSuits } from './belote'
 import { legalCards } from './rules'
 import { MAX_BID, MIN_BID } from './types'
 import type {
@@ -54,6 +55,7 @@ export interface RoundView {
   dealer: Seat
   phase: 'bidding' | 'window' | 'playing' | 'summary'
   turn: Seat | null
+  beloteDeal: { turned: Card; pass: 1 | 2 } | null
   bids: BidEntry[]
   contract: Contract | null
   level: CoincheLevel
@@ -77,6 +79,7 @@ export interface Actions {
   canManageSeats: boolean
   // Enchères
   canPass: boolean
+  takeSuits: Suit[]
   bid: { min: number; max: number; step: number } | null
   capot: { suggestedSuits: Suit[] } | null
   coinche: { contractRef: number } | null
@@ -138,6 +141,7 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
     canStart: false,
     canManageSeats: false,
     canPass: false,
+    takeSuits: [],
     bid: null,
     capot: null,
     coinche: null,
@@ -163,6 +167,10 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
     const cur = r.contract
     if (r.turn === seat) {
       a.canPass = true
+      if (r.beloteDeal) {
+        a.takeSuits = takeSuits(r)
+        return a
+      }
       if (cur?.value !== 'capot') {
         a.bid = { min: cur ? (cur.value as number) + 10 : MIN_BID, max: MAX_BID, step: 10 }
         if (a.bid.min > MAX_BID) a.bid = null
@@ -203,6 +211,7 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
       dealer: r.dealer,
       phase: r.phase,
       turn: r.turn,
+      beloteDeal: r.beloteDeal ? { turned: { ...r.beloteDeal.turned }, pass: r.beloteDeal.pass } : null,
       bids: r.bids.map((b) => ({ ...b })),
       contract: r.contract && { ...r.contract },
       level: r.level,

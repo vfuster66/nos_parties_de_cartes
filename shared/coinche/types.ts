@@ -15,7 +15,10 @@ export interface Participant {
   joinedAt: number
 }
 
+export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces'
+
 export interface Config {
+  game?: OnlineGame
   gameName: string
   teamNames: [string, string]
   rounding: RoundingMode
@@ -26,6 +29,7 @@ export interface Config {
 
 export type BidEntry =
   | { kind: 'pass'; seat: Seat }
+  | { kind: 'take'; seat: Seat; suit: Suit }
   | { kind: 'bid'; seat: Seat; value: number; suit: Suit }
   | { kind: 'capot'; seat: Seat; suit: Suit }
   | { kind: 'coinche'; seat: Seat; contractRef: number }
@@ -34,7 +38,7 @@ export type BidEntry =
 
 export interface Contract {
   seat: Seat
-  value: number | 'capot'
+  value: number | 'capot' | 'prise'
   suit: Suit
   /** Index de l'enchère dans `bids` : identifie ce contrat précis (anti-coinche obsolète). */
   bidIndex: number
@@ -84,6 +88,7 @@ export interface RoundState {
   phase: 'bidding' | 'window' | 'playing' | 'summary'
   /** PRIVÉ : mains actuelles. */
   hands: Card[][]
+  beloteDeal?: { turned: Card; remaining: Card[]; pass: 1 | 2 }
   /** PRIVÉ jusqu'à la première annonce : place détenant roi + dame d'atout dans la main initiale. */
   beloteSeat: Seat | null
   bids: BidEntry[]
@@ -125,6 +130,7 @@ export interface MatchState {
   totals: [number, number]
   round: RoundState | null
   rounds: RoundRecord[]
+  reserve?: number
   result: MatchResult | null
 }
 

@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { expect } from '@playwright/test'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
+import type { OnlineGame } from '../shared/coinche/types'
 
 export const NAMES = ['Anne', 'Bob', 'Cléo', 'Dan']
 
@@ -21,10 +22,11 @@ export async function fourPlayers(browser: Browser): Promise<Player[]> {
 }
 
 /** Hôte crée le salon ; les trois autres le rejoignent par le lien partagé (code seul). */
-export async function createAndJoin(players: Player[]): Promise<string> {
+export async function createAndJoin(players: Player[], game: OnlineGame = 'coinche'): Promise<string> {
   const [host, ...others] = players
   await host.page.goto('/#/en-ligne')
   await host.page.getByTestId('nickname').fill(host.name)
+  await host.page.getByLabel('Jeu', { exact: true }).selectOption(game)
   await host.page.getByTestId('create-room').click()
   await expect(host.page.getByTestId('lobby')).toBeVisible()
   const code = (await host.page.getByTestId('room-code').innerText()).replace('-', '')

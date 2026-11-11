@@ -1,7 +1,8 @@
 // Moteur d'une salle de coinche en ligne : applique des commandes à un état (pur, déterministe).
 // `applyCommand` ne modifie jamais l'état reçu : il renvoie un nouvel état ou lève une RuleError.
+import { scoreBelote } from '../../src/engine/belote'
+import { beloteAnnouncements, takeSuits } from './belote'
 import { scoreCoinche } from '../../src/engine/coinche'
-import type { CoincheInput } from '../../src/engine/coinche'
 import type { Command } from '../protocol'
 import { VERSIONED } from '../protocol'
 import {
@@ -18,7 +19,7 @@ import {
 import type { Card, Seat, TeamIdx } from './cards'
 import { legalCards } from './rules'
 import { MAX_BID, MIN_BID, RuleError, SURCOINCHE_WINDOW_MS } from './types'
-import type { BidEntry, Config, MatchState, Participant, RoundRecord, RoundState } from './types'
+import type { BidEntry, Config, MatchState, OnlineGame, Participant, RoundRecord, RoundState } from './types'
 
 export interface Ctx {
   now: number
@@ -34,7 +35,13 @@ export function defaultConfig(): Config {
   return { gameName: '', teamNames: ['Équipe 1', 'Équipe 2'], rounding: 'rounded', target: 3000, firstDealer: 'random' }
 }
 
-export function newMatch(id: string, code: string, host: Participant, now: number): MatchState {
+export function newMatch(
+  id: string,
+  code: string,
+  host: Participant,
+  now: number,
+  game: OnlineGame = 'coinche',
+): MatchState {
   return {
     schema: 1,
     id,
@@ -48,7 +55,7 @@ export function newMatch(id: string, code: string, host: Participant, now: numbe
     participants: [host],
     seats: [null, null, null, null],
     readyIds: [],
-    config: defaultConfig(),
+    config: { ...defaultConfig(), game, target: game === 'coinche' ? 3000 : 1000 },
     totals: [0, 0],
     round: null,
     rounds: [],
@@ -144,12 +151,15 @@ export function expireWindow(state: MatchState, now: number): MatchState {
 // ---------- Donnes ----------
 
 function startRound(s: MatchState, dealer: Seat, randomInt: (n: number) => number): void {
-  const hands = dealHands(shuffleDeck(randomInt))
+  const deck = shuffleDeck(randomInt)
+  const belote = s.config.game != null && s.config.game !== 'coinche'
+  const hands = belote ? [0, 1, 2, 3].map((i) => deck.slice(i * 5, i * 5 + 5)) : dealHands(deck)
   s.round = {
     index: s.rounds.length,
     dealer,
     phase: 'bidding',
     hands,
+    ...(belote ? { beloteDeal: { turned: deck[20], remaining: deck.slice(21), pass: 1 as const } } : {}),
     beloteSeat: null,
     bids: [],
     turn: nextSeat(dealer),
@@ -215,22 +225,39 @@ function endRound(s: MatchState, now: number): void {
   })
   const beloteTeam = r.beloteSeat == null ? null : teamOf(r.beloteSeat)
   const coincheTeam: TeamIdx | null = r.level === 'none' ? null : ((1 - takerTeam) as TeamIdx)
-  const input: CoincheInput = {
+  const common = {
     takerId: `place-${c.seat}`,
     takerTeam,
-    contract: c.value,
     trump: c.suit,
-    level: r.level,
-    coincheTeam,
     takerPoints: pts[takerTeam],
-    allTricks: counts[takerTeam] === 8, // capot = huit plis réellement remportés, jamais déduit des points
     beloteTeam,
   }
-  const detail = scoreCoinche(
-    input,
-    { kind: 'coinche', rounding: s.config.rounding, target: s.config.target },
-    { allowFullPoints: true },
-  )
+  const rules = { rounding: s.config.rounding, target: s.config.target }
+  const announcements = s.config.game === 'belote-annonces'
+  const detail =
+    c.value === 'prise'
+      ? scoreBelote(
+          {
+            ...common,
+            capotTeam: counts[0] === 8 ? 0 : counts[1] === 8 ? 1 : null,
+            ...(announcements ? beloteAnnouncements(r.tricks, c.suit) : { announcements: [{}, {}], strongest: null }),
+          },
+          { kind: 'belote', ...rules, announcements },
+          { allowFullPoints: true },
+        )
+      : scoreCoinche(
+          { ...common, contract: c.value, level: r.level, coincheTeam, allTricks: counts[takerTeam] === 8 },
+          { kind: 'coinche', ...rules },
+          { allowFullPoints: true },
+        )
+  if (detail.reserveCreated) s.reserve = (s.reserve ?? 0) + detail.reserveCreated.total
+  else if (s.reserve && detail.winnerTeam != null) {
+    detail.delta = [...detail.delta]
+    detail.delta[detail.winnerTeam] += s.reserve
+    detail.teams[detail.winnerTeam].score += s.reserve
+    detail.steps.push(`Litige précédent : ${s.reserve} points de réserve attribués à l’équipe gagnante.`)
+    s.reserve = 0
+  }
   s.totals = [s.totals[0] + detail.delta[0], s.totals[1] + detail.delta[1]]
   const record: RoundRecord = {
     index: r.index,
@@ -253,7 +280,7 @@ function endRound(s: MatchState, now: number): void {
   r.phase = 'summary'
   r.turn = null
   r.readyForNext = []
-  const winner = matchWinner(s.totals, s.config.target)
+  const winner = s.reserve ? null : matchWinner(s.totals, s.config.target)
   if (winner != null) {
     s.status = 'finished'
     s.endedAt = now
@@ -381,6 +408,23 @@ function gameCommand(s: MatchState, seat: Seat | null, cmd: Command, ctx: Ctx): 
   const windowClosed = r.phase === 'window' && r.window?.deadlineAt != null && ctx.now >= r.window.deadlineAt
 
   switch (cmd.type) {
+    case 'take': {
+      if (r.phase !== 'bidding' || !r.beloteDeal) fail('wrong_phase', 'La prise est réservée à la belote.')
+      if (r.turn !== me) fail('not_your_turn', 'Ce n’est pas votre tour de parler.')
+      if (!takeSuits(r).includes(cmd.suit)) fail('illegal_bid', 'Cette couleur est indisponible à ce tour.')
+      const deal = r.beloteDeal!
+      r.bids.push({ kind: 'take', seat: me, suit: cmd.suit })
+      r.contract = { seat: me, suit: cmd.suit, value: 'prise', bidIndex: r.bids.length - 1 }
+      r.hands[me].push(deal.turned)
+      let recipient = nextSeat(r.dealer)
+      for (let i = 0; i < 4; i++) {
+        r.hands[recipient].push(...deal.remaining.splice(0, recipient === me ? 2 : 3))
+        recipient = nextSeat(recipient)
+      }
+      delete r.beloteDeal
+      startPlay(r)
+      break
+    }
     case 'pass':
     case 'bid':
     case 'capot': {
@@ -448,6 +492,20 @@ function handleBidding(
   cmd: Extract<Command, { type: 'pass' | 'bid' | 'capot' }>,
   ctx: Ctx,
 ): void {
+  if (r.beloteDeal) {
+    if (cmd.type !== 'pass') fail('illegal_bid', 'Choisissez une couleur ou passez.')
+    r.bids.push({ kind: 'pass', seat: me })
+    r.consecutivePasses += 1
+    if (r.consecutivePasses === 4) {
+      if (r.beloteDeal.pass === 2) passedRound(s, ctx.randomInt)
+      else {
+        r.beloteDeal.pass = 2
+        r.consecutivePasses = 0
+        r.turn = nextSeat(r.dealer)
+      }
+    } else r.turn = nextSeat(me)
+    return
+  }
   const cur = r.contract
   if (cmd.type === 'pass') {
     r.bids.push({ kind: 'pass', seat: me })

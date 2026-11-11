@@ -14,7 +14,9 @@ const outcome = computed(() =>
     ? '★ Capot réalisé'
     : d.value.outcome === 'success'
       ? '✓ Contrat réussi'
-      : '✗ Contrat chuté',
+      : d.value.outcome === 'litige'
+        ? 'Litige'
+        : '✗ Contrat chuté',
 )
 const rounding = computed(() => (props.view.config.rounding === 'rounded' ? 'arrondi à la dizaine' : 'points réels'))
 const readySeats = computed(() => props.view.round!.readyForNext)
@@ -26,7 +28,7 @@ const finished = computed(() => props.view.status === 'finished')
     <h2 id="sum-title" class="text-xl font-bold">Résultat de la donne {{ r.index + 1 }}</h2>
     <p class="text-lg font-semibold" data-testid="outcome">{{ outcome }}</p>
     <dl class="grid grid-cols-2 gap-x-3 gap-y-1">
-      <dt class="muted">Contrat</dt>
+      <dt class="muted">{{ r.contract?.value === 'prise' ? 'Atout et preneur' : 'Contrat' }}</dt>
       <dd>
         {{ contractText(r.contract) }} — {{ nameOfSeat(view, r.contract!.seat) }} ({{ teamName(view, r.takerTeam!) }})
         <span v-if="r.level !== 'none'" class="font-semibold">{{ levelText(r.level) }}</span>
@@ -38,7 +40,9 @@ const finished = computed(() => props.view.status === 'finished')
       <dt class="muted">Belote</dt>
       <dd>{{ r.beloteTeam == null ? 'aucune' : teamName(view, r.beloteTeam) + ' (+20)' }}</dd>
       <dt class="muted">Calcul</dt>
-      <dd>{{ rounding }}, multiplicateur ×{{ d.multiplier }}</dd>
+      <dd>
+        {{ rounding }}<template v-if="r.contract?.value !== 'prise'">, multiplicateur ×{{ d.multiplier }}</template>
+      </dd>
     </dl>
     <table class="w-full text-center" aria-label="Points de la donne">
       <thead>

@@ -54,6 +54,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('bid', { value: z.number().int(), suit }),
   cmd('capot', { suit }),
   cmd('pass', {}),
+  cmd('take', { suit }),
   cmd('coinche', { contractRef: z.number().int().nonnegative() }),
   cmd('surcoinche', {}),
   cmd('acceptCoinche', {}),
@@ -68,6 +69,7 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
   'bid',
   'capot',
   'pass',
+  'take',
   'coinche',
   'surcoinche',
   'acceptCoinche',
@@ -75,7 +77,9 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
   'nextRound',
 ])
 
-export const createRoomSchema = z.object({ nickname: nicknameSchema }).strict()
+export const createRoomSchema = z
+  .object({ nickname: nicknameSchema, game: z.enum(['coinche', 'belote', 'belote-annonces']).optional() })
+  .strict()
 export const joinRoomSchema = z.object({ code: z.string().max(32), nickname: nicknameSchema }).strict()
 export const resumeSchema = z.object({ roomId: id, participantId: id, token: z.string().min(16).max(128) }).strict()
 export const lookupSchema = z.object({ code: z.string().max(32) }).strict()

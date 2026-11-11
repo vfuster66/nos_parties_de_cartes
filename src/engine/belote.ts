@@ -44,7 +44,11 @@ export const announcePoints = (c: AnnounceCounts): number =>
   ANNOUNCE_TYPES.reduce((s, t) => s + (c[t] ?? 0) * ANNOUNCE_POINTS[t], 0)
 export const announceCount = (c: AnnounceCounts): number => ANNOUNCE_TYPES.reduce((s, t) => s + (c[t] ?? 0), 0)
 
-export function validateBeloteInput(i: BeloteInput, rules: BeloteRules): string[] {
+export function validateBeloteInput(
+  i: BeloteInput,
+  rules: BeloteRules,
+  options: { allowFullPoints?: boolean } = {},
+): string[] {
   const errors: string[] = []
   if (!i.takerId) errors.push('Choisissez le joueur preneur.')
   if (i.capotTeam == null) {
@@ -52,7 +56,7 @@ export function validateBeloteInput(i: BeloteInput, rules: BeloteRules): string[
       errors.push('Les points de plis doivent être un nombre entier.')
     else if (i.takerPoints < 0 || i.takerPoints > TRICK_TOTAL)
       errors.push(`Les points de plis doivent être compris entre 0 et ${TRICK_TOTAL}.`)
-    else if (i.takerPoints === TRICK_TOTAL)
+    else if (i.takerPoints === TRICK_TOTAL && !options.allowFullPoints)
       errors.push('162 points ne prouvent pas un capot : indiquez le capot séparément.')
   }
   for (const c of i.announcements)
@@ -84,8 +88,12 @@ export function validAnnounceTeam(i: BeloteInput, rules: BeloteRules): TeamIdx |
 const other = (t: TeamIdx): TeamIdx => (t === 0 ? 1 : 0)
 
 /** Calcul d'une donne de belote (fonction pure). La réserve est gérée par game.ts. */
-export function scoreBelote(input: BeloteInput, rules: BeloteRules): TeamDealDetail {
-  const errors = validateBeloteInput(input, rules)
+export function scoreBelote(
+  input: BeloteInput,
+  rules: BeloteRules,
+  options: { allowFullPoints?: boolean } = {},
+): TeamDealDetail {
+  const errors = validateBeloteInput(input, rules, options)
   if (errors.length) throw new Error(errors.join(' '))
   const t = input.takerTeam
   const d = other(t)

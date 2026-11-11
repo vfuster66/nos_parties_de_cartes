@@ -113,7 +113,10 @@ export const useOnline = defineStore('online', () => {
     connection.value = 'online'
   }
 
-  async function createRoom(nickname: string): Promise<string | null> {
+  async function createRoom(
+    nickname: string,
+    game: 'coinche' | 'belote' | 'belote-annonces' = 'coinche',
+  ): Promise<string | null> {
     error.value = null
     try {
       await connectNow()
@@ -121,7 +124,7 @@ export const useOnline = defineStore('online', () => {
       error.value = (e as Error).message
       return null
     }
-    const r = await emit<{ grant: SessionGrant }>('room:create', { nickname })
+    const r = await emit<{ grant: SessionGrant }>('room:create', { nickname, game })
     if (!r.ok) {
       error.value = r.message
       return null

@@ -194,7 +194,15 @@ async function closeRoom(): Promise<void> {
     </section>
 
     <section class="card" aria-labelledby="rules-title">
-      <h2 id="rules-title" class="mb-2 text-xl font-bold">Partie</h2>
+      <h2 id="rules-title" class="mb-2 text-xl font-bold">
+        {{
+          view.config.game === 'belote-annonces'
+            ? 'Belote avec annonces'
+            : view.config.game === 'belote'
+              ? 'Belote sans annonces'
+              : 'Coinche'
+        }}
+      </h2>
       <form v-if="a.canConfigure" class="flex flex-col gap-3" @submit.prevent="saveConfig">
         <div>
           <label class="label" for="gname">Nom de la partie</label>

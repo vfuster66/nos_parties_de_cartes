@@ -12,6 +12,7 @@ const props = defineProps<{ code?: string }>()
 const online = useOnline()
 const router = useRouter()
 const nickname = ref(lastNickname())
+const game = ref<'coinche' | 'belote' | 'belote-annonces'>('coinche')
 const code = ref(props.code ?? '')
 const busy = ref(false)
 const sessions = ref(Object.values(loadSessions()).sort((a, b) => b.savedAt - a.savedAt))
@@ -26,7 +27,7 @@ const existing = computed(() =>
 
 async function create(): Promise<void> {
   busy.value = true
-  const id = await online.createRoom(nickname.value)
+  const id = await online.createRoom(nickname.value, game.value)
   busy.value = false
   if (id) await router.push(`/en-ligne/salon/${id}`)
 }
@@ -45,7 +46,9 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
     Le jeu en ligne n’est pas disponible : aucun serveur n’est configuré.
   </p>
   <template v-else>
-    <p class="muted mb-3">Coinche à quatre joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.</p>
+    <p class="muted mb-3">
+      Coinche ou belote à quatre joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.
+    </p>
     <div v-if="online.error" class="err mb-3" role="alert">{{ online.error }}</div>
 
     <section v-if="existing" class="card mb-3">
@@ -68,6 +71,14 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
         />
         <p class="muted mt-1 text-sm">Affiché aux autres joueurs, 20 caractères maximum.</p>
       </div>
+      <label v-if="!code" class="label">
+        Jeu
+        <select v-model="game" class="input">
+          <option value="coinche">Coinche</option>
+          <option value="belote">Belote sans annonces</option>
+          <option value="belote-annonces">Belote avec annonces</option>
+        </select>
+      </label>
       <button
         v-if="!code"
         class="btn btn-primary !min-h-14"

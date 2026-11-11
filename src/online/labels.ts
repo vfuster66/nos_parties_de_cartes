@@ -28,7 +28,7 @@ export const isRed = (s: Suit): boolean => s === 'coeur' || s === 'carreau'
 export const suitText = (s: Suit): string => `${SUIT_SYMBOLS[s]} ${SUIT_LABELS[s]}`
 
 export const contractValue = (c: Contract | null): string =>
-  c ? (c.value === 'capot' ? 'Capot' : String(c.value)) : '—'
+  c ? (c.value === 'capot' ? 'Capot' : c.value === 'prise' ? 'Prise à' : String(c.value)) : '—'
 export const contractText = (c: Contract | null): string => (c ? `${contractValue(c)} ${SUIT_SYMBOLS[c.suit]}` : '—')
 export const levelText = (l: 'none' | 'coinche' | 'surcoinche'): string =>
   l === 'surcoinche' ? 'surcoinché ×3' : l === 'coinche' ? 'coinché ×2' : ''
@@ -43,6 +43,8 @@ export function bidText(v: RoomView, b: BidEntry): string {
   switch (b.kind) {
     case 'pass':
       return `${who} passe`
+    case 'take':
+      return `${who} prend à ${suitText(b.suit)}`
     case 'bid':
       return `${who} annonce ${b.value} ${SUIT_SYMBOLS[b.suit]}`
     case 'capot':
