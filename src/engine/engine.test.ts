@@ -85,6 +85,35 @@ describe('coinche', () => {
     expect(() => scoreCoinche(co({ takerPoints: 162 }), R)).toThrow()
     expect(scoreCoinche(co({ contract: 'capot', takerPoints: 140 }), R).outcome).toBe('fail')
   })
+  it('allowFullPoints (jeu en ligne) : 162 points sans les huit plis ne sont jamais un capot', () => {
+    const on = { allowFullPoints: true }
+    // Sans l'option (compteur manuel) : refus conservé, y compris sur chaque appelant par défaut.
+    expect(() => scoreCoinche(co({ takerPoints: 162 }), R, {})).toThrow(/162 points/)
+    expect(() => scoreCoinche(co({ takerPoints: 162 }), R, { allowFullPoints: false })).toThrow()
+    const d = scoreCoinche(co({ takerPoints: 162 }), R, on)
+    expect(d.outcome).toBe('success') // et non 'capot'
+    expect(d.delta).toEqual([160 + 100, 0]) // plis arrondis 162 → 160, contrat 100, aucun bonus de capot
+    expect(scoreCoinche(co({ takerPoints: 162 }), RE, on).delta).toEqual([162 + 100, 0])
+    expect(scoreCoinche(co({ takerPoints: 162, level: 'coinche', coincheTeam: 1 }), R, on).delta).toEqual([520, 0])
+    // Capot annoncé avec 162 points mais un pli concédé : chute.
+    expect(scoreCoinche(co({ contract: 'capot', takerPoints: 162 }), R, on)).toMatchObject({
+      outcome: 'fail',
+      delta: [0, 410],
+    })
+    // Les huit plis restent le seul critère du capot ; les autres validations ne sont pas assouplies.
+    expect(scoreCoinche(co({ allTricks: true }), R, on).outcome).toBe('capot')
+    expect(() => scoreCoinche(co({ takerPoints: 163 }), R, on)).toThrow()
+    expect(() => scoreCoinche(co({ takerPoints: -1 }), R, on)).toThrow()
+    expect(() => scoreCoinche(co({ contract: 95 }), R, on)).toThrow()
+  })
+  it('contrat atteint exactement, belote qui sauve, arrondis sur les plis exacts', () => {
+    expect(scoreCoinche(co({ contract: 90, takerPoints: 90 }), R).outcome).toBe('success')
+    expect(scoreCoinche(co({ contract: 90, takerPoints: 89 }), R).outcome).toBe('fail')
+    expect(scoreCoinche(co({ contract: 90, takerPoints: 70, beloteTeam: 0 }), R).outcome).toBe('success')
+    expect(scoreCoinche(co({ contract: 90, takerPoints: 69, beloteTeam: 0 }), R).outcome).toBe('fail')
+    // 85 → 90 et 77 → 80 (défense), jugés sur 85 exacts ≥ 80.
+    expect(sc(co({ contract: 80, takerPoints: 85 }))).toEqual([90 + 80, 80])
+  })
   it('validations', () => {
     expect(() => scoreCoinche(co({ takerPoints: -1 }), R)).toThrow()
     expect(() => scoreCoinche(co({ takerPoints: 163 }), R)).toThrow()

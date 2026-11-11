@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import ConfirmHost from './components/ConfirmHost.vue'
 import UpdatePrompt from './components/UpdatePrompt.vue'
 import { useData } from './stores/data'
 
 const data = useData()
+const route = useRoute()
+// L'écran de jeu en ligne occupe tout l'espace : pas de barre de navigation par-dessus la main.
+const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
 </script>
 
 <template>
   <div class="mx-auto flex min-h-dvh max-w-2xl flex-col">
-    <main class="flex-1 px-3 pb-24 pt-3">
+    <main class="flex-1 px-3 pt-3" :class="inRoom ? 'pb-6' : 'pb-24'">
       <p v-if="!data.ready" class="muted" role="status">Chargement des données…</p>
       <div v-else-if="data.loadError" class="err" role="alert">
         Impossible de lire les données enregistrées : {{ data.loadError }}
@@ -23,7 +27,11 @@ const data = useData()
         <RouterView />
       </template>
     </main>
-    <nav class="fixed inset-x-0 bottom-0 z-10 border-t-2 border-slate-300 bg-white" aria-label="Navigation principale">
+    <nav
+      v-if="!inRoom"
+      class="fixed inset-x-0 bottom-0 z-10 border-t-2 border-slate-300 bg-white"
+      aria-label="Navigation principale"
+    >
       <ul class="mx-auto flex max-w-2xl">
         <li
           v-for="l in [
