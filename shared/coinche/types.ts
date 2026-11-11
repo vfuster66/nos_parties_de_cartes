@@ -1,5 +1,6 @@
 // État complet d'un salon / d'une partie de coinche en ligne. Cet état est PRIVÉ au serveur :
 // les clients ne reçoivent que les vues construites dans views.ts.
+import type { TarotMatch } from '../tarot/game'
 import type { CoincheLevel } from '../../src/engine/coinche'
 import type { TeamDealDetail } from '../../src/engine/types'
 import type { RoundingMode } from '../../src/engine/types'
@@ -15,10 +16,11 @@ export interface Participant {
   joinedAt: number
 }
 
-export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces'
+export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces' | 'tarot'
 
 export interface Config {
   game?: OnlineGame
+  tarotEndMode?: 'free' | 'threshold'
   gameName: string
   teamNames: [string, string]
   rounding: RoundingMode
@@ -129,6 +131,7 @@ export interface MatchState {
   config: Config
   totals: [number, number]
   round: RoundState | null
+  tarot?: TarotMatch
   rounds: RoundRecord[]
   reserve?: number
   result: MatchResult | null

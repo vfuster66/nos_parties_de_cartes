@@ -115,7 +115,7 @@ export const useOnline = defineStore('online', () => {
 
   async function createRoom(
     nickname: string,
-    game: 'coinche' | 'belote' | 'belote-annonces' = 'coinche',
+    game: 'coinche' | 'belote' | 'belote-annonces' | 'tarot' = 'coinche',
   ): Promise<string | null> {
     error.value = null
     try {
@@ -204,15 +204,29 @@ export const useOnline = defineStore('online', () => {
   }
 
   function recordResult(v: RoomView): void {
-    if ((v.status !== 'finished' && v.status !== 'abandoned') || !v.result) return
+    if (v.status !== 'finished' && v.status !== 'abandoned') return
     const players = v.participants.filter((p) => p.seat != null).map((p) => ({ nickname: p.nickname, seat: p.seat! }))
-    saveResult({
+    const common = {
       roomId: v.roomId,
-      name: v.config.gameName || 'Coinche en ligne',
-      status: v.status,
+      status: v.status as 'finished' | 'abandoned',
       endedAt: v.endedAt ?? Date.now(),
-      teamNames: v.config.teamNames,
       players,
+    }
+    if (v.tarot) {
+      saveResult({
+        ...common,
+        game: 'tarot',
+        name: v.config.gameName || 'Tarot en ligne',
+        totals: v.tarot.totals,
+        rounds: v.tarot.completed.filter((round) => round.detail).length,
+      })
+      return
+    }
+    if (!v.result) return
+    saveResult({
+      ...common,
+      name: v.config.gameName || (v.config.game?.startsWith('belote') ? 'Belote en ligne' : 'Coinche en ligne'),
+      teamNames: v.config.teamNames,
       totals: v.result.totals,
       winnerTeam: v.result.winnerTeam,
       myTeam: v.you.seat == null ? null : ((v.you.seat % 2) as 0 | 1),

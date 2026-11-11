@@ -5,6 +5,7 @@ import { forgetSession } from '../online/local'
 import OnlineLobby from '../online/components/OnlineLobby.vue'
 import OnlineResult from '../online/components/OnlineResult.vue'
 import OnlineTable from '../online/components/OnlineTable.vue'
+import TarotTable from '../online/components/TarotTable.vue'
 import { useOnline } from '../online/store'
 
 const props = defineProps<{ roomId: string }>()
@@ -52,6 +53,7 @@ function dropAndLeave(): void {
     </p>
     <template v-else>
       <OnlineLobby v-if="view.status === 'lobby'" :view="view" @left="router.push('/en-ligne')" />
+      <TarotTable v-else-if="view.tarot" :view="view" />
       <OnlineTable v-else-if="view.status === 'playing'" :view="view" />
       <OnlineResult v-else-if="view.result" :view="view" />
       <p v-if="online.error && view.status === 'lobby'" class="err mt-3" role="alert">{{ online.error }}</p>

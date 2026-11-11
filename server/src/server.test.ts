@@ -5,6 +5,7 @@ import { io as connect } from 'socket.io-client'
 import type { Socket } from 'socket.io-client'
 import { afterEach, describe, expect, it } from 'vitest'
 import { nextIntent, seededRandomInt } from '../../shared/coinche/testkit'
+import type { OnlineGame } from '../../shared/coinche/types'
 import type { RoomView } from '../../shared/coinche/views'
 import type { SessionGrant } from '../../shared/protocol'
 import { createApp } from './app'
@@ -99,11 +100,11 @@ async function boot(over: { dbPath?: string; now?: () => number; env?: NodeJS.Pr
 }
 
 /** Quatre joueurs dans un salon, assis et prêts ; la partie est démarrée si `start`. */
-async function table(env: Awaited<ReturnType<typeof boot>>, start = true) {
+async function table(env: Awaited<ReturnType<typeof boot>>, start = true, game?: OnlineGame) {
   const names = ['Anne', 'Bob', 'Cléo', 'Dan']
   const cs: Client[] = []
   const first = await env.open(names[0])
-  const created = await first.call('room:create', { nickname: names[0] })
+  const created = await first.call('room:create', { nickname: names[0], ...(game ? { game } : {}) })
   first.grant = created.grant!
   cs.push(first)
   for (const n of names.slice(1)) {
@@ -831,4 +832,36 @@ describe('mémoire : salons terminés', () => {
     await back.waitFor((v) => v.status === 'finished')
     expect(JSON.stringify(back.view!.totals)).toBe(total)
   })
+})
+
+it('joue une garde sans à quatre clients et retrouve la donne après une reconnexion', async () => {
+  const env = await boot()
+  const clients = await table(env, true, 'tarot')
+  let version = clients[0].view!.version
+  const send = async (type: string, extra: Record<string, unknown> = {}) => {
+    const { tarot } = await clients[0].waitFor((view) => view.version >= version)
+    const client = clients[tarot!.turn]
+    await client.waitFor((view) => view.version >= version)
+    const response = await client.cmd(type, extra)
+    expect(response.ok, response.message).toBe(true)
+    version = response.version!
+  }
+  await send('tarotBid', { contract: 'gardeSans' })
+  for (let i = 0; i < 3; i++) await send('pass')
+  for (let i = 0; i < 4; i++) await send('tarotDeclare', { types: [], shown: [] })
+  for (let i = 0; i < 72; i++) {
+    const { tarot } = await clients[0].waitFor((view) => view.version >= version)
+    const current = await clients[tarot!.turn].waitFor((view) => view.version >= version)
+    expect(current.tarot?.dog).toEqual([])
+    await send('tarotPlay', { card: current.tarot!.actions.playable[0] })
+  }
+  const final = await clients[0].waitFor((view) => view.tarot?.phase === 'summary')
+  expect(final.tarot?.detail?.score.base).toBe(160)
+  expect(final.tarot?.trickCount).toBe(18)
+  clients[3].socket.disconnect()
+  await clients[0].waitFor((view) => view.pause !== null)
+  const back = await env.open('Dan repris')
+  expect((await back.call('room:resume', creds(clients[3].grant!))).ok).toBe(true)
+  const resumed = await back.waitFor((view) => view.tarot?.phase === 'summary')
+  expect(resumed.tarot?.totals).toEqual(final.tarot?.totals)
 })

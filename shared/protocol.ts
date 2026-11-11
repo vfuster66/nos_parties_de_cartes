@@ -5,6 +5,11 @@ const seat = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
 const suit = z.enum(['pique', 'coeur', 'trefle', 'carreau'])
 const rank = z.enum(['7', '8', '9', '10', 'V', 'D', 'R', 'A'])
 const card = z.object({ suit, rank }).strict()
+const tarotCard = z.custom<import('./tarot/cards').TarotCard>(
+  (value) =>
+    typeof value === 'string' &&
+    /^(excuse|atout:([1-9]|1[0-9]|2[01])|(pique|coeur|trefle|carreau):([1-9]|10|V|C|D|R))$/.test(value),
+)
 const id = z.string().min(1).max(64)
 
 /** Texte affiché tel quel (jamais interprété comme HTML) : sans caractères de contrôle ni de mise en forme. */
@@ -46,6 +51,7 @@ export const commandSchema = z.discriminatedUnion('type', [
       .max(20000)
       .refine((n) => n % 10 === 0, 'Multiple de 10')
       .optional(),
+    tarotEndMode: z.enum(['free', 'threshold']).optional(),
     firstDealer: z.union([z.literal('random'), seat]).optional(),
   }),
   cmd('start', {}),
@@ -55,6 +61,26 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('capot', { suit }),
   cmd('pass', {}),
   cmd('take', { suit }),
+  cmd('tarotBid', { contract: z.enum(['pousse', 'garde', 'gardeSans', 'gardeContre']) }),
+  cmd('tarotDiscard', { cards: z.array(tarotCard).length(6) }),
+  cmd('tarotDeclare', {
+    types: z
+      .array(
+        z.enum([
+          'poigneSimple',
+          'poigneDouble',
+          'poigneTriple',
+          'blancTete',
+          'blancAtout',
+          'petitChelem',
+          'grandChelem',
+        ]),
+      )
+      .max(4),
+    shown: z.array(tarotCard).max(15),
+  }),
+  cmd('tarotPlay', { card: tarotCard }),
+  cmd('tarotFinish', {}),
   cmd('coinche', { contractRef: z.number().int().nonnegative() }),
   cmd('surcoinche', {}),
   cmd('acceptCoinche', {}),
@@ -70,6 +96,11 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
   'capot',
   'pass',
   'take',
+  'tarotBid',
+  'tarotDiscard',
+  'tarotDeclare',
+  'tarotPlay',
+  'tarotFinish',
   'coinche',
   'surcoinche',
   'acceptCoinche',
@@ -78,7 +109,7 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
 ])
 
 export const createRoomSchema = z
-  .object({ nickname: nicknameSchema, game: z.enum(['coinche', 'belote', 'belote-annonces']).optional() })
+  .object({ nickname: nicknameSchema, game: z.enum(['coinche', 'belote', 'belote-annonces', 'tarot']).optional() })
   .strict()
 export const joinRoomSchema = z.object({ code: z.string().max(32), nickname: nicknameSchema }).strict()
 export const resumeSchema = z.object({ roomId: id, participantId: id, token: z.string().min(16).max(128) }).strict()

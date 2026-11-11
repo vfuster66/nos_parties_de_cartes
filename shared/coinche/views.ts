@@ -1,4 +1,6 @@
 // Vues filtrées envoyées aux clients. Construites champ par champ (liste blanche) : on ne copie jamais l'état serveur.
+import { buildTarotView } from '../tarot/views'
+import type { TarotView } from '../tarot/views'
 import type { CoincheLevel } from '../../src/engine/coinche'
 import type { TeamDealDetail } from '../../src/engine/types'
 import { sortHand, teamOf } from './cards'
@@ -103,6 +105,7 @@ export interface RoomView {
   pause: { reason: string; disconnectedSeats: Seat[] } | null
   totals: [number, number]
   round: RoundView | null
+  tarot?: TarotView
   rounds: RoundRecordView[]
   /** Votre main uniquement. */
   hand: Card[]
@@ -258,6 +261,7 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
       : null,
     totals: [...state.totals],
     round,
+    tarot: state.tarot ? buildTarotView(state.tarot, seat, paused || state.status !== 'playing') : undefined,
     rounds: state.rounds.map(recordView),
     hand: seat != null && r ? sortHand(r.hands[seat], trump) : [],
     actions: allowedActions(state, pid, absent),

@@ -12,7 +12,7 @@ const props = defineProps<{ code?: string }>()
 const online = useOnline()
 const router = useRouter()
 const nickname = ref(lastNickname())
-const game = ref<'coinche' | 'belote' | 'belote-annonces'>('coinche')
+const game = ref<'coinche' | 'belote' | 'belote-annonces' | 'tarot'>('coinche')
 const code = ref(props.code ?? '')
 const busy = ref(false)
 const sessions = ref(Object.values(loadSessions()).sort((a, b) => b.savedAt - a.savedAt))
@@ -47,7 +47,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
   </p>
   <template v-else>
     <p class="muted mb-3">
-      Coinche ou belote à quatre joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.
+      Coinche, belote ou tarot à quatre joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.
     </p>
     <div v-if="online.error" class="err mb-3" role="alert">{{ online.error }}</div>
 
@@ -77,6 +77,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
           <option value="coinche">Coinche</option>
           <option value="belote">Belote sans annonces</option>
           <option value="belote-annonces">Belote avec annonces</option>
+          <option value="tarot">Tarot à quatre</option>
         </select>
       </label>
       <button
@@ -134,9 +135,14 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
           <p class="font-semibold">
             {{ r.name }} <span class="muted">· {{ when(r.endedAt) }}</span>
           </p>
-          <p>{{ r.teamNames[0] }} {{ r.totals[0] }} — {{ r.totals[1] }} {{ r.teamNames[1] }}</p>
+          <ul v-if="r.game === 'tarot'">
+            <li v-for="p in [...r.players].sort((a, b) => r.totals[b.seat] - r.totals[a.seat])" :key="p.seat">
+              {{ p.nickname }} · {{ r.totals[p.seat] }} pts
+            </li>
+          </ul>
+          <p v-else>{{ r.teamNames[0] }} {{ r.totals[0] }} — {{ r.totals[1] }} {{ r.teamNames[1] }}</p>
           <p v-if="r.status === 'abandoned'" class="muted">Abandonnée (aucune victoire)</p>
-          <p v-else-if="r.myTeam != null" class="font-semibold">
+          <p v-else-if="r.game !== 'tarot' && r.myTeam != null" class="font-semibold">
             {{ r.winnerTeam === r.myTeam ? '🏆 Victoire' : 'Défaite' }}
           </p>
           <p class="muted text-sm">{{ r.players.map((p) => p.nickname).join(', ') }}</p>

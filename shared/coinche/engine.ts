@@ -1,5 +1,6 @@
 // Moteur d'une salle de coinche en ligne : applique des commandes à un état (pur, déterministe).
 // `applyCommand` ne modifie jamais l'état reçu : il renvoie un nouvel état ou lève une RuleError.
+import { playTarot, startTarot } from '../tarot/game'
 import { scoreBelote } from '../../src/engine/belote'
 import { beloteAnnouncements, takeSuits } from './belote'
 import { scoreCoinche } from '../../src/engine/coinche'
@@ -367,6 +368,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       if (cmd.teamNames) s.config.teamNames = cmd.teamNames
       if (cmd.rounding) s.config.rounding = cmd.rounding
       if (cmd.target) s.config.target = cmd.target
+      if (cmd.tarotEndMode && s.config.game === 'tarot') s.config.tarotEndMode = cmd.tarotEndMode
       if (cmd.firstDealer !== undefined) s.config.firstDealer = cmd.firstDealer
       s.readyIds = [] // tout le monde revalide les règles
       break
@@ -381,7 +383,8 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       s.status = 'playing'
       s.startedAt = ctx.now
       s.readyIds = []
-      startRound(s, first, ctx.randomInt)
+      if (s.config.game === 'tarot') s.tarot = startTarot(first, ctx.randomInt)
+      else startRound(s, first, ctx.randomInt)
       break
     }
     case 'abandon': {
@@ -392,7 +395,34 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       break
     }
     default:
-      gameCommand(s, seat, cmd, ctx)
+      if (s.tarot) {
+        if (s.status !== 'playing' || seat == null) fail('wrong_phase', 'La partie doit être en cours.')
+        const round = s.tarot.round
+        if (cmd.type === 'tarotFinish') {
+          hostOnly()
+          if (s.config.tarotEndMode === 'threshold' || round.phase !== 'summary')
+            fail('wrong_phase', 'La clôture manuelle est disponible entre deux donnes en mode arrêt libre.')
+          s.status = 'finished'
+          s.endedAt = ctx.now
+        } else {
+          if (ctx.paused) fail('paused', 'Partie en pause : un joueur est déconnecté.')
+          playTarot(
+            s.tarot,
+            seat!,
+            cmd,
+            s.seats.map((id) => id!),
+            ctx.randomInt,
+          )
+          if (
+            s.config.tarotEndMode === 'threshold' &&
+            s.tarot.round.phase === 'summary' &&
+            s.tarot.totals.some((score) => Math.abs(score) >= s.config.target)
+          ) {
+            s.status = 'finished'
+            s.endedAt = ctx.now
+          }
+        }
+      } else gameCommand(s, seat, cmd, ctx)
   }
   return bump(s)
 }

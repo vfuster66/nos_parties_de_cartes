@@ -16,19 +16,27 @@ export interface StoredSession {
   savedAt: number
 }
 
-export interface OnlineResult {
+interface OnlineResultBase {
   /** Identifiant stable de la partie en ligne (anti-doublon lors des reconnexions). */
   roomId: string
   name: string
   status: 'finished' | 'abandoned'
   endedAt: number
-  teamNames: [string, string]
   players: { nickname: string; seat: Seat }[]
-  totals: [number, number]
-  winnerTeam: TeamIdx | null
-  myTeam: TeamIdx | null
   rounds: number
 }
+
+export type OnlineResult = OnlineResultBase &
+  (
+    | {
+        game?: 'team'
+        teamNames: [string, string]
+        totals: [number, number]
+        winnerTeam: TeamIdx | null
+        myTeam: TeamIdx | null
+      }
+    | { game: 'tarot'; totals: number[] }
+  )
 
 function read<T>(key: string, fallback: T): T {
   try {
