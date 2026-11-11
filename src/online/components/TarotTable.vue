@@ -37,15 +37,13 @@ function toggle(card: TarotCard): void {
     ? selected.value.filter((item) => item !== card)
     : [...selected.value, card]
 }
-const handfulSize = computed(() =>
-  announcements.value.includes('poigneTriple')
-    ? 15
-    : announcements.value.includes('poigneDouble')
-      ? 13
-      : announcements.value.includes('poigneSimple')
-        ? 10
-        : 0,
-)
+const handfulSize = computed(() => {
+  const sizes = tarot.value.handfulSizes
+  const type = announcements.value.find(
+    (item) => item === 'poigneSimple' || item === 'poigneDouble' || item === 'poigneTriple',
+  )
+  return type ? sizes[type] : 0
+})
 const canSelect = (card: TarotCard): boolean =>
   tarot.value.actions.discard.includes(card) ||
   (tarot.value.actions.canDeclare && handfulSize.value > 0 && (isTrump(card) || card === 'excuse')) ||
@@ -64,10 +62,10 @@ const sortedHand = computed(() =>
 )
 const player = (seat: 0 | 1 | 2 | 3) => nameOfSeat(props.view, seat)
 const results = computed(() =>
-  ([0, 1, 2, 3] as const)
-    .map((seat) => ({
-      name: player(seat),
-      score: tarot.value.totals[seat],
+  tarot.value.totals
+    .map((score, seat) => ({
+      name: player(seat as 0 | 1 | 2 | 3),
+      score,
       delta: tarot.value.detail?.score.delta[seat],
     }))
     .sort((a, b) => b.score - a.score),
@@ -86,7 +84,7 @@ async function abandon() {
 
 <template>
   <main class="flex flex-col gap-3" data-testid="tarot-table">
-    <h1 class="text-xl font-bold">Tarot à quatre</h1>
+    <h1 class="text-xl font-bold">Tarot à {{ view.seats.length === 3 ? 'trois' : 'quatre' }}</h1>
     <p v-if="view.pause" class="note" role="status">{{ view.pause.reason }}</p>
     <p v-if="online.error" class="err" role="alert">{{ online.error }}</p>
     <section class="card flex flex-col gap-2">
@@ -156,7 +154,7 @@ async function abandon() {
         </li>
       </ul>
       <template v-if="tarot.phase === 'playing'">
-        <h2 class="font-bold">Pli {{ tarot.trickCount + 1 }}/18</h2>
+        <h2 class="font-bold">Pli {{ tarot.trickCount + 1 }}/{{ tarot.trickLimit }}</h2>
         <ul>
           <li v-for="play in tarot.trick" :key="play.seat">{{ player(play.seat) }} · {{ label(play.card) }}</li>
         </ul>
@@ -202,7 +200,7 @@ async function abandon() {
       <button v-if="tarot.actions.next" class="btn btn-primary" :disabled="busy" @click="online.send('nextRound')">
         Prêt pour la prochaine donne
       </button>
-      <p v-if="active">Prêts · {{ tarot.ready.length }}/4</p>
+      <p v-if="active">Prêts · {{ tarot.ready.length }}/{{ view.seats.length }}</p>
       <button
         v-if="active && view.you.isHost && view.config.tarotEndMode !== 'threshold'"
         class="btn"

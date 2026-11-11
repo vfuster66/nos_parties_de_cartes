@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Seat } from '../coinche/cards'
 import { act, lobby, PIDS, seededRandomInt } from '../coinche/testkit'
+import { newMatch } from '../coinche/engine'
 import { buildView } from '../coinche/views'
 import { dealTarot, halfPoints, legalTarotCards, tarotTrickWinner } from './cards'
 import type { TarotCard } from './cards'
@@ -89,4 +90,12 @@ describe('tarot en ligne à quatre', () => {
       expect(act(s, 'p0', { type: 'tarotFinish' }).status).toBe('finished')
     },
   )
+})
+
+it('refuse la quatrième place et le quatrième donneur au tarot à trois', () => {
+  const state = newMatch('room', 'ABCDEFGH', { id: 'p0', nickname: 'Anne', joinedAt: 0 }, 0, 'tarot-3')
+  expect(buildView(state, 'p0', new Set(['p0']), 0).actions.freeSeats).toEqual([0, 1, 2])
+  expect(() => act(state, 'p0', { type: 'takeSeat', seat: 3 })).toThrow()
+  expect(() => act(state, 'p0', { type: 'assignSeat', participantId: 'p0', seat: 3 })).toThrow()
+  expect(() => act(state, 'p0', { type: 'configure', firstDealer: 3 })).toThrow()
 })

@@ -9,7 +9,8 @@ export interface TarotPlay {
   card: TarotCard
 }
 
-export const nextTarotSeat = (seat: Seat): Seat => ((seat + 3) % 4) as Seat
+export type TarotPlayerCount = 3 | 4
+export const nextTarotSeat = (seat: Seat, count: TarotPlayerCount): Seat => ((seat + count - 1) % count) as Seat
 
 export const isTrump = (card: TarotCard): boolean => card.startsWith('atout:')
 export const isBout = (card: TarotCard): boolean => card === 'excuse' || card === 'atout:1' || card === 'atout:21'
@@ -24,7 +25,7 @@ export function halfPoints(card: TarotCard): number {
   return 1
 }
 
-export function dealTarot(dealer: Seat, randomInt: (n: number) => number) {
+export function dealTarot(dealer: Seat, randomInt: (n: number) => number, count: TarotPlayerCount = 4) {
   const deck: TarotCard[] = [
     ...SUITS.flatMap((suit) => RANKS.map((rank): TarotCard => `${suit}:${rank}`)),
     ...Array.from({ length: 21 }, (_, i): TarotCard => `atout:${i + 1}`),
@@ -36,12 +37,12 @@ export function dealTarot(dealer: Seat, randomInt: (n: number) => number) {
   }
   // Six cartes au chien, intercalées entre les paquets de trois.
   const dog: TarotCard[] = []
-  const hands = SEATS.map((): TarotCard[] => [])
-  let seat = nextTarotSeat(dealer)
+  const hands = SEATS.slice(0, count).map((): TarotCard[] => [])
+  let seat = nextTarotSeat(dealer, count)
   for (let packet = 0; packet < 24; packet++) {
     if ([3, 7, 11, 15, 19, 23].includes(packet)) dog.push(deck.shift()!)
     hands[seat].push(...deck.splice(0, 3))
-    seat = nextTarotSeat(seat)
+    seat = nextTarotSeat(seat, count)
   }
   return { dog, hands }
 }

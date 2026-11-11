@@ -12,7 +12,7 @@ const props = defineProps<{ code?: string }>()
 const online = useOnline()
 const router = useRouter()
 const nickname = ref(lastNickname())
-const game = ref<'coinche' | 'belote' | 'belote-annonces' | 'tarot'>('coinche')
+const game = ref<'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3'>('coinche')
 const code = ref(props.code ?? '')
 const busy = ref(false)
 const sessions = ref(Object.values(loadSessions()).sort((a, b) => b.savedAt - a.savedAt))
@@ -47,7 +47,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
   </p>
   <template v-else>
     <p class="muted mb-3">
-      Coinche, belote ou tarot à quatre joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.
+      Coinche, belote ou tarot à trois ou quatre, chacun sur son téléphone. Aucun compte : un pseudo suffit.
     </p>
     <div v-if="online.error" class="err mb-3" role="alert">{{ online.error }}</div>
 
@@ -78,6 +78,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
           <option value="belote">Belote sans annonces</option>
           <option value="belote-annonces">Belote avec annonces</option>
           <option value="tarot">Tarot à quatre</option>
+          <option value="tarot-3">Tarot à trois</option>
         </select>
       </label>
       <button

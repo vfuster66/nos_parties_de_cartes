@@ -77,7 +77,7 @@ export const commandSchema = z.discriminatedUnion('type', [
         ]),
       )
       .max(4),
-    shown: z.array(tarotCard).max(15),
+    shown: z.array(tarotCard).max(18),
   }),
   cmd('tarotPlay', { card: tarotCard }),
   cmd('tarotFinish', {}),
@@ -109,7 +109,10 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
 ])
 
 export const createRoomSchema = z
-  .object({ nickname: nicknameSchema, game: z.enum(['coinche', 'belote', 'belote-annonces', 'tarot']).optional() })
+  .object({
+    nickname: nicknameSchema,
+    game: z.enum(['coinche', 'belote', 'belote-annonces', 'tarot', 'tarot-3']).optional(),
+  })
   .strict()
 export const joinRoomSchema = z.object({ code: z.string().max(32), nickname: nicknameSchema }).strict()
 export const resumeSchema = z.object({ roomId: id, participantId: id, token: z.string().min(16).max(128) }).strict()

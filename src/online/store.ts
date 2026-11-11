@@ -115,7 +115,7 @@ export const useOnline = defineStore('online', () => {
 
   async function createRoom(
     nickname: string,
-    game: 'coinche' | 'belote' | 'belote-annonces' | 'tarot' = 'coinche',
+    game: 'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3' = 'coinche',
   ): Promise<string | null> {
     error.value = null
     try {

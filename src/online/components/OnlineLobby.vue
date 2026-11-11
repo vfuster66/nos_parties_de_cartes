@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import type { Seat } from '../../../shared/coinche/cards'
+import { isOnlineTarot } from '../../../shared/coinche/types'
 import type { RoomView } from '../../../shared/coinche/views'
 import { askConfirm } from '../../confirm'
 import { teamName } from '../labels'
@@ -12,7 +13,8 @@ const emit = defineEmits<{ left: [] }>()
 const online = useOnline()
 const a = computed(() => props.view.actions)
 const busy = computed(() => !!online.pending)
-const seats = [0, 1, 2, 3] as Seat[]
+const seats = computed(() => props.view.seats.map((_, index) => index as Seat))
+const tarot = computed(() => isOnlineTarot(props.view.config.game))
 const nick = (pid: string | null): string => props.view.participants.find((p) => p.id === pid)?.nickname ?? ''
 const me = computed(() => props.view.participants.find((p) => p.id === props.view.you.participantId)!)
 
@@ -60,17 +62,17 @@ async function saveConfig(): Promise<void> {
     teamNames: [form.team0 || 'Équipe 1', form.team1 || 'Équipe 2'],
     rounding: form.rounding,
     target: form.target,
-    ...(props.view.config.game === 'tarot' ? { tarotEndMode: form.tarotEndMode } : {}),
+    ...(tarot.value ? { tarotEndMode: form.tarotEndMode } : {}),
     firstDealer: form.firstDealer,
   })
 }
 
 const startBlocker = computed(() => {
   const v = props.view
-  if (v.seats.some((s) => !s)) return 'Il faut quatre joueurs assis.'
+  if (v.seats.some((s) => !s)) return 'Toutes les places doivent être occupées.'
   if (v.participants.some((p) => p.seat != null && !p.connected)) return 'Un joueur est déconnecté.'
   if (!v.seats.every((s) => v.participants.find((p) => p.id === s)?.ready))
-    return 'Les quatre joueurs doivent être prêts.'
+    return 'Tous les joueurs doivent être prêts.'
   return ''
 })
 
@@ -120,7 +122,7 @@ async function closeRoom(): Promise<void> {
 
     <section class="card" aria-labelledby="seats-title">
       <h2 id="seats-title" class="mb-1 text-xl font-bold">Places</h2>
-      <p class="muted mb-3">
+      <p v-if="!tarot" class="muted mb-3">
         Les partenaires sont face à face : {{ teamName(view, 0) }} (places 1 et 3) contre
         {{ teamName(view, 1) }} (places 2 et 4).
       </p>
@@ -132,7 +134,9 @@ async function closeRoom(): Promise<void> {
           :class="s % 2 === 0 ? 'border-teal-300' : 'border-amber-300'"
           :data-testid="`seat-${s}`"
         >
-          <p class="muted text-sm">Place {{ s + 1 }} · {{ teamName(view, (s % 2) as 0 | 1) }}</p>
+          <p class="muted text-sm">
+            Place {{ s + 1 }}<template v-if="!tarot"> · {{ teamName(view, (s % 2) as 0 | 1) }}</template>
+          </p>
           <div class="flex items-center justify-between gap-2">
             <p v-if="view.seats[s]" class="font-semibold">
               {{ nick(view.seats[s]) }}
@@ -163,7 +167,9 @@ async function closeRoom(): Promise<void> {
     </section>
 
     <section class="card" aria-labelledby="who-title">
-      <h2 id="who-title" class="mb-2 text-xl font-bold">Participants ({{ view.participants.length }}/4)</h2>
+      <h2 id="who-title" class="mb-2 text-xl font-bold">
+        Participants ({{ view.participants.length }}/{{ seats.length }})
+      </h2>
       <ul class="flex flex-col gap-2">
         <li
           v-for="p in view.participants"
@@ -200,8 +206,10 @@ async function closeRoom(): Promise<void> {
     <section class="card" aria-labelledby="rules-title">
       <h2 id="rules-title" class="mb-2 text-xl font-bold">
         {{
-          view.config.game === 'tarot'
-            ? 'Tarot à quatre'
+          tarot
+            ? seats.length === 3
+              ? 'Tarot à trois'
+              : 'Tarot à quatre'
             : view.config.game === 'belote-annonces'
               ? 'Belote avec annonces'
               : view.config.game === 'belote'
@@ -214,7 +222,7 @@ async function closeRoom(): Promise<void> {
           <label class="label" for="gname">Nom de la partie</label>
           <input id="gname" v-model="form.gameName" class="input" maxlength="40" autocomplete="off" />
         </div>
-        <div v-if="view.config.game !== 'tarot'" class="grid grid-cols-2 gap-2">
+        <div v-if="!tarot" class="grid grid-cols-2 gap-2">
           <div>
             <label class="label" for="t0">Équipe des places 1 et 3</label>
             <input id="t0" v-model="form.team0" class="input" maxlength="20" autocomplete="off" />
@@ -224,7 +232,7 @@ async function closeRoom(): Promise<void> {
             <input id="t1" v-model="form.team1" class="input" maxlength="20" autocomplete="off" />
           </div>
         </div>
-        <fieldset v-if="view.config.game !== 'tarot'">
+        <fieldset v-if="!tarot">
           <legend class="label">Calcul des points</legend>
           <label class="mr-4"
             ><input v-model="form.rounding" type="radio" value="rounded" /> Arrondi à la dizaine</label
@@ -232,7 +240,7 @@ async function closeRoom(): Promise<void> {
           <label><input v-model="form.rounding" type="radio" value="exact" /> Points réels</label>
         </fieldset>
         <div>
-          <label v-if="view.config.game === 'tarot'" class="label">
+          <label v-if="tarot" class="label">
             Fin de partie
             <select v-model="form.tarotEndMode" class="input">
               <option value="free">Arrêt libre</option>
@@ -269,10 +277,10 @@ async function closeRoom(): Promise<void> {
       <dl v-else class="grid grid-cols-2 gap-x-3 gap-y-1">
         <dt class="muted">Nom</dt>
         <dd>{{ view.config.gameName || '—' }}</dd>
-        <dt v-if="view.config.game !== 'tarot'" class="muted">Équipes</dt>
-        <dd v-if="view.config.game !== 'tarot'">{{ view.config.teamNames.join(' / ') }}</dd>
+        <dt v-if="!tarot" class="muted">Équipes</dt>
+        <dd v-if="!tarot">{{ view.config.teamNames.join(' / ') }}</dd>
         <dt class="muted">Calcul</dt>
-        <dd>{{ view.config.game === 'tarot' || view.config.rounding === 'rounded' ? 'Arrondi' : 'Points réels' }}</dd>
+        <dd>{{ tarot || view.config.rounding === 'rounded' ? 'Arrondi' : 'Points réels' }}</dd>
         <dt class="muted">Objectif</dt>
         <dd>{{ view.config.target }}</dd>
         <dt class="muted">Premier donneur</dt>

@@ -19,7 +19,7 @@ import {
 } from './cards'
 import type { Card, Seat, TeamIdx } from './cards'
 import { legalCards } from './rules'
-import { MAX_BID, MIN_BID, RuleError, SURCOINCHE_WINDOW_MS } from './types'
+import { isOnlineTarot, MAX_BID, MIN_BID, RuleError, SURCOINCHE_WINDOW_MS } from './types'
 import type { BidEntry, Config, MatchState, OnlineGame, Participant, RoundRecord, RoundState } from './types'
 
 export interface Ctx {
@@ -29,8 +29,6 @@ export interface Ctx {
   /** Entier uniforme dans [0, n). Injecté : cryptographique en production, déterministe seulement en test. */
   randomInt: (n: number) => number
 }
-
-export const MAX_PARTICIPANTS = 4
 
 export function defaultConfig(): Config {
   return { gameName: '', teamNames: ['Équipe 1', 'Équipe 2'], rounding: 'rounded', target: 3000, firstDealer: 'random' }
@@ -54,7 +52,7 @@ export function newMatch(
     status: 'lobby',
     hostId: host.id,
     participants: [host],
-    seats: [null, null, null, null],
+    seats: game === 'tarot-3' ? [null, null, null] : [null, null, null, null],
     readyIds: [],
     config: { ...defaultConfig(), game, target: game === 'coinche' ? 3000 : 1000 },
     totals: [0, 0],
@@ -84,7 +82,7 @@ const requireParticipant = (s: MatchState, pid: string): Participant =>
 export function addParticipant(state: MatchState, p: Participant): MatchState {
   if (state.status !== 'lobby')
     fail('wrong_phase', 'La partie a déjà commencé : aucune nouvelle personne ne peut entrer.')
-  if (state.participants.length >= MAX_PARTICIPANTS) fail('full', 'Le salon est complet (4 personnes).')
+  if (state.participants.length >= state.seats.length) fail('full', 'Le salon est complet.')
   if (state.participants.some((x) => x.nickname.toLowerCase() === p.nickname.toLowerCase()))
     fail('conflict', 'Ce pseudo est déjà pris dans le salon.')
   const s = clone(state)
@@ -312,6 +310,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
   switch (cmd.type) {
     case 'takeSeat': {
       lobbyOnly()
+      if (cmd.seat >= s.seats.length) fail('invalid', 'Cette place n’existe pas dans ce salon.')
       if (s.seats[cmd.seat] && s.seats[cmd.seat] !== actorId) fail('conflict', 'Cette place est déjà prise.')
       s.seats = s.seats.map((x) => (x === actorId ? null : x))
       s.seats[cmd.seat] = actorId
@@ -328,6 +327,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       lobbyOnly()
       hostOnly()
       if (!s.participants.some((p) => p.id === cmd.participantId)) fail('not_found', 'Participant inconnu.')
+      if (cmd.seat != null && cmd.seat >= s.seats.length) fail('invalid', 'Cette place n’existe pas dans ce salon.')
       if (cmd.seat != null && s.seats[cmd.seat] && s.seats[cmd.seat] !== cmd.participantId)
         fail('conflict', 'Cette place est déjà prise.')
       s.seats = s.seats.map((x) => (x === cmd.participantId ? null : x))
@@ -368,8 +368,12 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       if (cmd.teamNames) s.config.teamNames = cmd.teamNames
       if (cmd.rounding) s.config.rounding = cmd.rounding
       if (cmd.target) s.config.target = cmd.target
-      if (cmd.tarotEndMode && s.config.game === 'tarot') s.config.tarotEndMode = cmd.tarotEndMode
-      if (cmd.firstDealer !== undefined) s.config.firstDealer = cmd.firstDealer
+      if (cmd.tarotEndMode && isOnlineTarot(s.config.game)) s.config.tarotEndMode = cmd.tarotEndMode
+      if (cmd.firstDealer !== undefined) {
+        if (cmd.firstDealer !== 'random' && cmd.firstDealer >= s.seats.length)
+          fail('invalid', 'Cette place ne peut pas être donneuse.')
+        s.config.firstDealer = cmd.firstDealer
+      }
       s.readyIds = [] // tout le monde revalide les règles
       break
     }
@@ -377,13 +381,14 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       lobbyOnly()
       hostOnly()
       if (ctx.paused) fail('paused', 'Un joueur est déconnecté.')
-      if (s.seats.some((x) => x == null)) fail('invalid', 'Les quatre places doivent être occupées.')
-      if (!s.seats.every((x) => s.readyIds.includes(x!))) fail('invalid', 'Les quatre joueurs doivent être prêts.')
-      const first: Seat = s.config.firstDealer === 'random' ? (ctx.randomInt(4) as Seat) : s.config.firstDealer
+      if (s.seats.some((x) => x == null)) fail('invalid', 'Toutes les places doivent être occupées.')
+      if (!s.seats.every((x) => s.readyIds.includes(x!))) fail('invalid', 'Tous les joueurs doivent être prêts.')
+      const first: Seat =
+        s.config.firstDealer === 'random' ? (ctx.randomInt(s.seats.length) as Seat) : s.config.firstDealer
       s.status = 'playing'
       s.startedAt = ctx.now
       s.readyIds = []
-      if (s.config.game === 'tarot') s.tarot = startTarot(first, ctx.randomInt)
+      if (isOnlineTarot(s.config.game)) s.tarot = startTarot(first, ctx.randomInt, s.config.game === 'tarot-3' ? 3 : 4)
       else startRound(s, first, ctx.randomInt)
       break
     }

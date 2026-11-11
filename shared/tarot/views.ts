@@ -1,4 +1,4 @@
-import { CONTRACTS, tarotDeclarations } from './game'
+import { CONTRACTS, HANDFUL_SIZES, tarotDeclarations } from './game'
 import type { TarotMatch } from './game'
 import type { Seat } from '../coinche/cards'
 import { discardableTarotCards, legalTarotCards } from './cards'
@@ -7,11 +7,14 @@ export type TarotView = ReturnType<typeof buildTarotView>
 
 export function buildTarotView(game: TarotMatch, seat: Seat | null, disabled: boolean) {
   const r = game.round
+  const playerCount = game.totals.length === 3 ? 3 : 4
   const hand = seat == null ? [] : r.hands[seat]
   const active = !disabled && seat != null && r.turn === seat
   const dogPublic = (r.contract === 'pousse' || r.contract === 'garde') && r.phase !== 'bidding'
   return {
     phase: r.phase,
+    trickLimit: 72 / playerCount,
+    handfulSizes: HANDFUL_SIZES[playerCount],
     dealer: r.dealer,
     turn: r.turn,
     taker: r.taker,
@@ -33,7 +36,7 @@ export function buildTarotView(game: TarotMatch, seat: Seat | null, disabled: bo
       bids: active && r.phase === 'bidding' ? CONTRACTS.slice(r.contract ? CONTRACTS.indexOf(r.contract) + 1 : 0) : [],
       discard: active && r.phase === 'discard' ? discardableTarotCards(hand, 6) : [],
       canDeclare: active && r.phase === 'declare',
-      declarations: active && r.phase === 'declare' ? tarotDeclarations(hand, seat === r.taker) : [],
+      declarations: active && r.phase === 'declare' ? tarotDeclarations(hand, seat === r.taker, playerCount) : [],
       playable: active && r.phase === 'playing' ? legalTarotCards(hand, r.trick) : [],
       next: !disabled && seat != null && r.phase === 'summary' && !r.ready.includes(seat),
     },

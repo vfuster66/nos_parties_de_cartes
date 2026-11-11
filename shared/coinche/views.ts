@@ -157,7 +157,7 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
   if (state.status === 'finished' || state.status === 'abandoned') return none
   const a = { ...none, canAbandon: isHost }
   if (state.status === 'lobby') {
-    a.freeSeats = ([0, 1, 2, 3] as Seat[]).filter((s) => !state.seats[s]) // changer de place reste possible
+    a.freeSeats = state.seats.flatMap((id, index) => (id ? [] : [index as Seat])) // changer de place reste possible
     a.canLeaveSeat = seat != null
     a.canReady = seat != null
     a.canConfigure = isHost
@@ -202,7 +202,7 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
   const absent = isPaused(state, connected)
   const paused = state.status === 'playing' && absent
   const r = state.round
-  const disconnectedSeats = ([0, 1, 2, 3] as Seat[]).filter((s) => state.seats[s] && !connected.has(state.seats[s]!))
+  const disconnectedSeats = state.seats.flatMap((id, index) => (id && !connected.has(id) ? [index as Seat] : []))
   let round: RoundView | null = null
   if (r) {
     const w = r.window

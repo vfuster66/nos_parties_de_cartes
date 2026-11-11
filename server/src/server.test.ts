@@ -101,7 +101,7 @@ async function boot(over: { dbPath?: string; now?: () => number; env?: NodeJS.Pr
 
 /** Quatre joueurs dans un salon, assis et prêts ; la partie est démarrée si `start`. */
 async function table(env: Awaited<ReturnType<typeof boot>>, start = true, game?: OnlineGame) {
-  const names = ['Anne', 'Bob', 'Cléo', 'Dan']
+  const names = game === 'tarot-3' ? ['Anne', 'Bob', 'Cléo'] : ['Anne', 'Bob', 'Cléo', 'Dan']
   const cs: Client[] = []
   const first = await env.open(names[0])
   const created = await first.call('room:create', { nickname: names[0], ...(game ? { game } : {}) })
@@ -114,12 +114,12 @@ async function table(env: Awaited<ReturnType<typeof boot>>, start = true, game?:
     c.grant = r.grant!
     cs.push(c)
   }
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < cs.length; i++) {
     expect((await cs[i].cmd('takeSeat', { seat: i })).ok).toBe(true)
     expect((await cs[i].cmd('setReady', { ready: true })).ok).toBe(true)
   }
   if (start) {
-    expect((await cs[0].cmd('configure', { firstDealer: 3 })).ok).toBe(true)
+    expect((await cs[0].cmd('configure', { firstDealer: cs.length - 1 })).ok).toBe(true)
     for (const c of cs) await c.cmd('setReady', { ready: true })
     for (const c of cs) await c.waitFor((v) => v.participants.every((p) => p.ready))
     const r = await cs[0].cmd('start')
@@ -834,34 +834,46 @@ describe('mémoire : salons terminés', () => {
   })
 })
 
-it('joue une garde sans à quatre clients et retrouve la donne après une reconnexion', async () => {
-  const env = await boot()
-  const clients = await table(env, true, 'tarot')
-  let version = clients[0].view!.version
-  const send = async (type: string, extra: Record<string, unknown> = {}) => {
-    const { tarot } = await clients[0].waitFor((view) => view.version >= version)
-    const client = clients[tarot!.turn]
-    await client.waitFor((view) => view.version >= version)
-    const response = await client.cmd(type, extra)
-    expect(response.ok, response.message).toBe(true)
-    version = response.version!
-  }
-  await send('tarotBid', { contract: 'gardeSans' })
-  for (let i = 0; i < 3; i++) await send('pass')
-  for (let i = 0; i < 4; i++) await send('tarotDeclare', { types: [], shown: [] })
-  for (let i = 0; i < 72; i++) {
-    const { tarot } = await clients[0].waitFor((view) => view.version >= version)
-    const current = await clients[tarot!.turn].waitFor((view) => view.version >= version)
-    expect(current.tarot?.dog).toEqual([])
-    await send('tarotPlay', { card: current.tarot!.actions.playable[0] })
-  }
-  const final = await clients[0].waitFor((view) => view.tarot?.phase === 'summary')
-  expect(final.tarot?.detail?.score.base).toBe(160)
-  expect(final.tarot?.trickCount).toBe(18)
-  clients[3].socket.disconnect()
-  await clients[0].waitFor((view) => view.pause !== null)
-  const back = await env.open('Dan repris')
-  expect((await back.call('room:resume', creds(clients[3].grant!))).ok).toBe(true)
-  const resumed = await back.waitFor((view) => view.tarot?.phase === 'summary')
-  expect(resumed.tarot?.totals).toEqual(final.tarot?.totals)
-})
+it.each(['tarot', 'tarot-3'] as const)(
+  'joue une garde sans en %s et retrouve la donne après reconnexion',
+  async (game) => {
+    const env = await boot()
+    const clients = await table(env, true, game)
+    const count = clients.length
+    const handSize = 72 / count
+    expect(clients[0].view?.tarot?.hand).toHaveLength(handSize)
+    expect(clients[0].view?.seats).toHaveLength(count)
+    let version = clients[0].view!.version
+    const send = async (type: string, extra: Record<string, unknown> = {}) => {
+      const { tarot } = await clients[0].waitFor((view) => view.version >= version)
+      const client = clients[tarot!.turn]
+      await client.waitFor((view) => view.version >= version)
+      const response = await client.cmd(type, extra)
+      expect(response.ok, response.message).toBe(true)
+      version = response.version!
+    }
+    await send('tarotBid', { contract: 'gardeSans' })
+    for (let i = 1; i < count; i++) await send('pass')
+    for (let i = 0; i < count; i++) await send('tarotDeclare', { types: [], shown: [] })
+    for (let i = 0; i < 72; i++) {
+      const { tarot } = await clients[0].waitFor((view) => view.version >= version)
+      const current = await clients[tarot!.turn].waitFor((view) => view.version >= version)
+      expect(current.tarot?.dog).toEqual([])
+      await send('tarotPlay', { card: current.tarot!.actions.playable[0] })
+    }
+    const final = await clients[0].waitFor((view) => view.tarot?.phase === 'summary')
+    expect(final.tarot?.detail?.score.base).toBe(160)
+    expect(final.tarot?.trickCount).toBe(handSize)
+    const contractDelta = final.tarot!.detail!.score.contractDelta
+    const value = final.tarot!.detail!.score.value
+    expect(contractDelta[final.tarot!.taker!]).toBe((count - 1) * value)
+    expect(contractDelta.reduce((sum, points) => sum + points, 0)).toBe(0)
+    const disconnected = clients[count - 1]
+    disconnected.socket.disconnect()
+    await clients[0].waitFor((view) => view.pause !== null)
+    const back = await env.open('Dan repris')
+    expect((await back.call('room:resume', creds(disconnected.grant!))).ok).toBe(true)
+    const resumed = await back.waitFor((view) => view.tarot?.phase === 'summary')
+    expect(resumed.tarot?.totals).toEqual(final.tarot?.totals)
+  },
+)

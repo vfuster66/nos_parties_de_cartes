@@ -15,9 +15,14 @@ import {
   nextTarotSeat,
   tarotTrickWinner,
 } from './cards'
-import type { TarotCard, TarotPlay } from './cards'
+import type { TarotCard, TarotPlay, TarotPlayerCount } from './cards'
 
 export const CONTRACTS: readonly TarotContract[] = ['pousse', 'garde', 'gardeSans', 'gardeContre']
+export const HANDFUL_SIZES = {
+  3: { poigneSimple: 13, poigneDouble: 15, poigneTriple: 18 },
+  4: { poigneSimple: 10, poigneDouble: 13, poigneTriple: 15 },
+} as const
+
 type Declaration = Exclude<TarotBonusType, 'petitAuBout'>
 
 interface CompletedTrick {
@@ -52,19 +57,24 @@ function reject(message: string): never {
   throw new RuleError('invalid', message)
 }
 
-function dealRound(completed: TarotMatch['completed'], dealer: Seat, randomInt: (n: number) => number): TarotRound {
+function dealRound(
+  completed: TarotMatch['completed'],
+  dealer: Seat,
+  randomInt: (n: number) => number,
+  count: TarotPlayerCount,
+): TarotRound {
   for (let i = 0; i < 100; i++) {
-    const { hands, dog } = dealTarot(dealer, randomInt)
+    const { hands, dog } = dealTarot(dealer, randomInt, count)
     if (
       hands.some((hand) => hand.includes('atout:1') && !hand.includes('excuse') && hand.filter(isTrump).length === 1)
     ) {
       completed.push({ dealer, taker: null, contract: null, detail: null })
-      dealer = nextTarotSeat(dealer)
+      dealer = nextTarotSeat(dealer, count)
       continue
     }
     return {
       dealer,
-      turn: nextTarotSeat(dealer),
+      turn: nextTarotSeat(dealer, count),
       phase: 'bidding',
       hands,
       dog,
@@ -82,17 +92,17 @@ function dealRound(completed: TarotMatch['completed'], dealer: Seat, randomInt: 
   return reject('Impossible de distribuer une donne valide.')
 }
 
-export function startTarot(dealer: Seat, randomInt: (n: number) => number): TarotMatch {
+export function startTarot(dealer: Seat, randomInt: (n: number) => number, count: TarotPlayerCount = 4): TarotMatch {
   const completed: TarotMatch['completed'] = []
-  return { totals: [0, 0, 0, 0], completed, round: dealRound(completed, dealer, randomInt) }
+  return { totals: Array<number>(count).fill(0), completed, round: dealRound(completed, dealer, randomInt, count) }
 }
 
-export function tarotDeclarations(hand: TarotCard[], taker: boolean): Declaration[] {
+export function tarotDeclarations(hand: TarotCard[], taker: boolean, playerCount: TarotPlayerCount): Declaration[] {
   const count = hand.filter((card) => isTrump(card) || card === 'excuse').length
   const result: Declaration[] = []
-  if (count >= 10) result.push('poigneSimple')
-  if (count >= 13) result.push('poigneDouble')
-  if (count >= 15) result.push('poigneTriple')
+  const sizes = HANDFUL_SIZES[playerCount]
+  for (const type of ['poigneSimple', 'poigneDouble', 'poigneTriple'] as const)
+    if (count >= sizes[type]) result.push(type)
   if (!hand.some((card) => /:[VCDR]$/.test(card))) result.push('blancTete')
   if (!hand.some(isTrump)) result.push('blancAtout')
   if (taker) result.push('petitChelem', 'grandChelem')
@@ -103,24 +113,25 @@ function resolveTarot(game: TarotMatch, ids: string[]): void {
   const r = game.round
   const taker = r.taker!
   const attack = (seat: Seat) => seat === taker
+  const lastIndex = r.tricks.length - 1
   const pile = r.contract === 'gardeSans' ? r.dog : r.discard
   const taken = [...pile]
   let compensation = 0
   const bonuses: TarotBonusInput[] = []
   for (const [index, trick] of r.tricks.entries()) {
     for (const { card, seat } of trick.plays) {
-      if (card === 'excuse' && index < 17) {
+      if (card === 'excuse' && index < lastIndex) {
         if (attack(seat)) taken.push(card)
         if (attack(seat) !== attack(trick.winner)) compensation += attack(seat) ? -1 : 1
       } else if (attack(trick.winner)) taken.push(card)
     }
   }
-  const last = r.tricks[17]
+  const last = r.tricks[lastIndex]
   const excuseChelem =
     last.plays[0].card === 'excuse' &&
     last.winner === last.plays[0].seat &&
     r.tricks.every(({ winner }) => attack(winner) === attack(last.winner))
-  const petitTrick = excuseChelem ? r.tricks[16] : last
+  const petitTrick = excuseChelem ? r.tricks[lastIndex - 1] : last
   if (petitTrick.plays.some(({ card }) => card === 'atout:1'))
     bonuses.push({ type: 'petitAuBout', playerId: ids[petitTrick.winner] })
   for (const { seat, types } of r.declarations) {
@@ -161,9 +172,12 @@ export function playTarot(
   randomInt: (n: number) => number,
 ): void {
   const r = game.round
+  const count: TarotPlayerCount = game.totals.length === 3 ? 3 : 4
+  const trickLimit = 72 / count
   if (cmd.type === 'nextRound' && r.phase === 'summary') {
     if (!r.ready.includes(seat)) r.ready.push(seat)
-    if (r.ready.length === 4) game.round = dealRound(game.completed, nextTarotSeat(r.dealer), randomInt)
+    if (r.ready.length === count)
+      game.round = dealRound(game.completed, nextTarotSeat(r.dealer, count), randomInt, count)
     return
   }
   if (seat !== r.turn) throw new RuleError('not_your_turn', 'Ce n’est pas votre tour.')
@@ -175,11 +189,11 @@ export function playTarot(
       r.contract = cmd.contract
     }
     r.bids.push({ seat, contract: cmd.type === 'tarotBid' ? cmd.contract : null })
-    r.turn = nextTarotSeat(seat)
-    if (r.bids.length < 4) return
+    r.turn = nextTarotSeat(seat, count)
+    if (r.bids.length < count) return
     if (r.taker == null) {
       game.completed.push({ dealer: r.dealer, taker: null, contract: null, detail: null })
-      game.round = dealRound(game.completed, nextTarotSeat(r.dealer), randomInt)
+      game.round = dealRound(game.completed, nextTarotSeat(r.dealer, count), randomInt, count)
     } else if (r.contract === 'pousse' || r.contract === 'garde') {
       r.hands[r.taker].push(...r.dog)
       r.turn = r.taker
@@ -199,19 +213,21 @@ export function playTarot(
       reject('On écarte des atouts uniquement si les autres cartes ne suffisent pas.')
     r.discard = cmd.cards
     r.hands[seat] = r.hands[seat].filter((card) => !chosen.has(card))
-    r.turn = nextTarotSeat(r.dealer)
+    r.turn = nextTarotSeat(r.dealer, count)
     r.phase = 'declare'
     return
   }
   if (r.phase === 'declare' && cmd.type === 'tarotDeclare') {
-    const eligible = tarotDeclarations(r.hands[seat], seat === r.taker)
+    const eligible = tarotDeclarations(r.hands[seat], seat === r.taker, count)
     const types = [...new Set(cmd.types)]
-    const handfuls = types.filter((type) => type.startsWith('poigne'))
+    const handfuls = types.filter(
+      (type) => type === 'poigneSimple' || type === 'poigneDouble' || type === 'poigneTriple',
+    )
     const chelems = types.filter((type) => type.endsWith('Chelem'))
     if (types.some((type) => !eligible.includes(type)) || handfuls.length > 1 || chelems.length > 1)
       reject('Cette combinaison d’annonces n’est pas autorisée.')
     const shown = cmd.shown
-    const size = handfuls[0] === 'poigneSimple' ? 10 : handfuls[0] === 'poigneDouble' ? 13 : handfuls[0] ? 15 : 0
+    const size = handfuls[0] ? HANDFUL_SIZES[count][handfuls[0]] : 0
     if (
       new Set(shown).size !== size ||
       shown.length !== size ||
@@ -220,8 +236,8 @@ export function playTarot(
     )
       reject('Montrez les atouts de la poignée. L’Excuse ne complète qu’une poignée exacte.')
     r.declarations.push({ seat, types, shown })
-    r.turn = nextTarotSeat(seat)
-    if (r.declarations.length === 4) {
+    r.turn = nextTarotSeat(seat, count)
+    if (r.declarations.length === count) {
       r.phase = 'playing'
       if (r.declarations.some((declaration) => declaration.types.includes('grandChelem'))) r.turn = r.taker!
     }
@@ -231,18 +247,18 @@ export function playTarot(
     if (!legalTarotCards(r.hands[seat], r.trick).includes(cmd.card)) reject('Cette carte ne peut pas être jouée.')
     r.hands[seat] = r.hands[seat].filter((card) => card !== cmd.card)
     r.trick.push({ seat, card: cmd.card })
-    r.turn = nextTarotSeat(seat)
-    if (r.trick.length !== 4) return
+    r.turn = nextTarotSeat(seat, count)
+    if (r.trick.length !== count) return
     const opening = r.trick[0]
     const excuseChelem =
-      r.tricks.length === 17 &&
+      r.tricks.length === trickLimit - 1 &&
       opening.card === 'excuse' &&
       r.tricks.every(({ winner }) => (winner === r.taker) === (opening.seat === r.taker))
     const winner = excuseChelem ? opening.seat : tarotTrickWinner(r.trick)
     r.tricks.push({ plays: r.trick, winner })
     r.trick = []
     r.turn = winner
-    if (r.tricks.length === 18) resolveTarot(game, ids)
+    if (r.tricks.length === trickLimit) resolveTarot(game, ids)
     return
   }
   throw new RuleError('wrong_phase', 'Cette action n’est pas disponible à cette étape.')
