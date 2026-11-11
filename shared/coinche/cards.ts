@@ -80,9 +80,20 @@ export function dealHands(deck: readonly Card[]): Card[][] {
   return [0, 1, 2, 3].map((s) => deck.slice(s * 8, s * 8 + 8))
 }
 
-/** Tri d'affichage : par couleur (atout d'abord), puis force décroissante. */
+/** Tri d'affichage : atout d'abord, alternance noir/rouge, puis force décroissante. */
 export function sortHand(hand: readonly Card[], trump: Suit | null): Card[] {
-  const suitOrder = [...SUITS].sort((a, b) => (a === trump ? -1 : b === trump ? 1 : 0))
+  const present = new Set(hand.map((card) => card.suit))
+  const isRed = (suit: Suit) => suit === 'coeur' || suit === 'carreau'
+  const remaining = SUITS.filter((suit) => present.has(suit) && suit !== trump)
+  const red = remaining.filter(isRed)
+  const black = remaining.filter((suit) => !isRed(suit))
+  const suitOrder: Suit[] = trump && present.has(trump) ? [trump] : []
+  let preferRed = suitOrder.length ? !isRed(suitOrder[0]) : red.length > black.length
+  while (red.length || black.length) {
+    const suit = (preferRed ? (red.shift() ?? black.shift()) : (black.shift() ?? red.shift()))!
+    suitOrder.push(suit)
+    preferRed = !isRed(suit)
+  }
   return [...hand].sort((a, b) => {
     if (a.suit !== b.suit) return suitOrder.indexOf(a.suit) - suitOrder.indexOf(b.suit)
     const order = a.suit === trump ? TRUMP_ORDER : PLAIN_ORDER

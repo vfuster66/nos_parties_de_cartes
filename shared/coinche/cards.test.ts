@@ -82,4 +82,16 @@ describe('valeurs', () => {
     )
     expect(hand.map(cardKey)).toEqual(['coeur:V', 'coeur:9', 'pique:A', 'pique:7'])
   })
+  it.each([
+    ['coeur', ['coeur', 'pique', 'carreau', 'trefle']],
+    ['trefle', ['trefle', 'coeur', 'pique', 'carreau']],
+    [null, ['pique', 'coeur', 'trefle', 'carreau']],
+  ] as const)('alterne les groupes rouges et noirs avec atout %s', (trump, expected) => {
+    const hand = fullDeck().filter((card) => card.rank === '7')
+    expect(sortHand(hand, trump).map((card) => card.suit)).toEqual(expected)
+  })
+  it('alterne aussi avec trois couleurs quand l’atout est absent', () => {
+    const hand = fullDeck().filter((card) => card.rank === '7' && card.suit !== 'trefle')
+    expect(sortHand(hand, 'trefle').map((card) => card.suit)).toEqual(['coeur', 'pique', 'carreau'])
+  })
 })
