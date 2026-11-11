@@ -9,6 +9,7 @@ async function startGame(players: Player[], rules: { target: number }) {
   const host = players[0].page
   await host.getByTestId('room-code').waitFor()
   // Règles : l'hôte les enregistre (cela remet les « prêt » à zéro), puis tout le monde se déclare prêt.
+  await host.getByTestId('rules-toggle').click()
   await host.locator('#target').fill(String(rules.target))
   await host.locator('#dealer').selectOption('3') // la place 4 donne : la place 1 parle et entame
   await host.locator('#gname').fill('Soirée e2e')

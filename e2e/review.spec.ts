@@ -109,7 +109,7 @@ for (const width of WIDTHS) {
       // --- Accueil et erreurs ---
       await anne.page.goto('/')
       await snap(anne.page, c, '00-accueil-compteur')
-      await anne.page.getByRole('link', { name: /Jouer en ligne/ }).click() // le chemin réel de l'utilisateur
+      await anne.page.getByTestId('play-online').click() // le chemin réel de l'utilisateur
       await expect(anne.page.getByTestId('create-room')).toBeVisible()
       await snap(anne.page, c, '01-accueil-en-ligne')
       // Clavier virtuel (émulation par réduction de la hauteur) : le formulaire reste atteignable.
@@ -137,6 +137,7 @@ for (const width of WIDTHS) {
       await fifth.getByTestId('join-room').click()
       await expect(fifth.getByRole('alert')).toContainText(/complet|commencé/i)
       await snap(fifth, c, '05-salon-complet-refus')
+      await anne.page.getByTestId('rules-toggle').click()
       await anne.page.locator('#gname').fill('Une soirée dont le nom est vraiment très très long pour tester')
       await anne.page.locator('#dealer').selectOption('3')
       await anne.page.locator('#target').fill('3000')
@@ -289,6 +290,7 @@ for (const width of WIDTHS) {
     try {
       const [anne, bob] = ps
       await createAndJoin(ps)
+      await anne.page.getByTestId('rules-toggle').click()
       await anne.page.locator('#target').fill('100')
       await anne.page.locator('#dealer').selectOption('3')
       await anne.page.getByTestId('save-config').click()

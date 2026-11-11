@@ -6,6 +6,7 @@ test('belote avec annonces : deuxième tour, donne complète et score partagé',
   const host = players[0].page
   try {
     await createAndJoin(players, 'belote-annonces')
+    await host.getByTestId('rules-toggle').click()
     await expect(host.locator('#target')).toHaveValue('1000')
     await host.locator('#dealer').selectOption('3')
     await host.getByTestId('save-config').click()
