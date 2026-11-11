@@ -72,9 +72,9 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
         />
         <p class="muted mt-1 text-sm">Affiché aux autres joueurs, 20 caractères maximum.</p>
       </div>
-      <label v-if="!code" class="label">
-        Jeu
-        <select v-model="game" class="input">
+      <div v-if="!code">
+        <label for="online-game" class="label">Jeu</label>
+        <select id="online-game" v-model="game" class="input">
           <option value="coinche">Coinche</option>
           <option value="belote">Belote sans annonces</option>
           <option value="belote-annonces">Belote avec annonces</option>
@@ -83,7 +83,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
           <option value="tarot-5">Tarot à cinq</option>
           <option value="tarot-6">Tarot à six</option>
         </select>
-      </label>
+      </div>
       <button
         v-if="!code"
         class="btn btn-primary !min-h-14"
