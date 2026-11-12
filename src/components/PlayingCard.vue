@@ -77,7 +77,51 @@ const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(pro
       </span>
       <span
         v-if="stateMark"
-      …558 tokens truncated… d="M35 41q1-15 15-15t15 15l-4 19q-11 9-22 0z" fill="#ffe0b2" stroke="#153c50" stroke-width="2" />
+        class="absolute right-[7%] top-[5%] flex aspect-square w-[24%] items-center justify-center rounded-full border border-slate-700 bg-white text-[21cqw] font-black text-slate-950 shadow-sm"
+        aria-hidden="true"
+        >{{ stateMark }}</span
+      >
+      <svg
+        v-if="courtCard"
+        class="absolute inset-x-[17%] top-[24%] h-[53%] w-[66%]"
+        viewBox="0 0 100 130"
+        role="presentation"
+        aria-hidden="true"
+      >
+        <g>
+          <rect x="5" y="3" width="90" height="124" rx="12" fill="#fff2da" />
+          <path d="M5 66h90v61H5z" fill="#f1dfc0" />
+          <g :fill="courtSuitRed ? '#ef4d3e' : '#153c50'">
+            <path d="M17 48Q20 27 36 24h28q16 3 19 24l8 30-12 15H21L9 78z" />
+            <path d="M23 84q27-13 54 0l9 22H14z" />
+          </g>
+          <path d="M35 24 29 11l13 7 8-14 8 14 13-7-6 15" fill="#efa900" stroke="#a85c00" stroke-width="2" />
+          <path d="M35 41q1-15 15-15t15 15l-4 19q-11 9-22 0z" fill="#ffe0b2" stroke="#153c50" stroke-width="2" />
+          <path d="M34 42q0-20 17-20 13 0 16 15l-8-3-8-7q-4 8-17 10z" fill="#153c50" />
+          <path
+            d="M48 48h2m9 0h2m-8 5 3 2m-9 6q6 4 12 0"
+            fill="none"
+            stroke="#153c50"
+            stroke-linecap="round"
+            stroke-width="2"
+          />
+          <path
+            d="M29 73q21 10 42 0m-21-8v19m-10-3 10 7 10-7"
+            fill="none"
+            stroke="#efa900"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="4"
+          />
+          <path d="M14 99h72m-62 9h52" stroke="#158b87" stroke-linecap="round" stroke-width="3" />
+          <g transform="rotate(180 50 65)">
+            <path
+              d="M17 48Q20 27 36 24h28q16 3 19 24l8 30-12 15H21L9 78z"
+              :fill="courtSuitRed ? '#ef4d3e' : '#153c50'"
+            />
+            <path d="M23 84q27-13 54 0l9 22H14z" :fill="courtSuitRed ? '#ef4d3e' : '#153c50'" />
+            <path d="M35 24 29 11l13 7 8-14 8 14 13-7-6 15" fill="#efa900" stroke="#a85c00" stroke-width="2" />
+            <path d="M35 41q1-15 15-15t15 15l-4 19q-11 9-22 0z" fill="#ffe0b2" stroke="#153c50" stroke-width="2" />
             <path d="M34 42q0-20 17-20 13 0 16 15l-8-3-8-7q-4 8-17 10z" fill="#153c50" />
             <path
               d="M29 73q21 10 42 0m-21-8v19m-10-3 10 7 10-7"
