@@ -8,9 +8,7 @@ const data = useData()
 
 <template>
   <PageHeader title="Équipes" back="/" back-label="Accueil" />
-  <p class="muted mb-3">
-    Une équipe est créée automatiquement lors du choix de ses deux membres, dans n’importe quel ordre.
-  </p>
+  <p class="muted mb-3">Équipes créées automatiquement avec 2 joueurs.</p>
   <p v-if="!data.teams.length" class="card muted">Aucune équipe.</p>
   <ul class="flex flex-col gap-2">
     <li v-for="t in data.teams" :key="t.id">

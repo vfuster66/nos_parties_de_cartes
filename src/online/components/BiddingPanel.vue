@@ -5,13 +5,17 @@ import type { Suit } from '../../../shared/coinche/cards'
 import type { RoomView } from '../../../shared/coinche/views'
 import { askConfirm } from '../../confirm'
 import { SUIT_LABELS, SUIT_SYMBOLS } from '../../engine/types'
-import { bidText, cardName, contractText, levelText, nameOfSeat, suitText } from '../labels'
+import { contractText, levelText, nameOfSeat, suitText } from '../labels'
 import { useOnline } from '../store'
 
 const props = defineProps<{ view: RoomView }>()
 const online = useOnline()
 const a = computed(() => props.view.actions)
 const round = computed(() => props.view.round!)
+const secondPass = computed(() => round.value.beloteDeal?.pass === 2)
+const SUIT_BUTTON_ORDER: readonly Suit[] = ['carreau', 'coeur', 'pique', 'trefle']
+// Au second tour, les quatre couleurs restent visibles ; celle déjà proposée au premier tour est désactivée.
+const takeOptions = computed(() => (secondPass.value ? SUIT_BUTTON_ORDER : a.value.takeSuits))
 const values = computed(() => {
   const b = a.value.bid
   if (!b) return []
@@ -66,45 +70,78 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
 </script>
 
 <template>
-  <section class="card flex flex-col gap-3" aria-labelledby="bid-title" data-testid="bidding">
-    <h2 id="bid-title" class="text-lg font-bold">{{ round.beloteDeal ? 'Prise d’atout' : 'Enchères' }}</h2>
-    <p v-if="round.beloteDeal">
-      Carte retournée : {{ cardName(round.beloteDeal.turned) }} · Tour {{ round.beloteDeal.pass }}/2
-    </p>
+  <section
+    class="card flex flex-col gap-3 !border-teal-700 !border-2"
+    aria-labelledby="bid-title"
+    data-testid="bidding"
+  >
+    <h2 id="bid-title" class="eyebrow">{{ round.beloteDeal ? 'Prise d’atout' : 'Enchères' }}</h2>
+    <p v-if="round.beloteDeal" class="chip self-start">{{ secondPass ? '2e tour' : '1er tour' }}</p>
     <p v-else-if="round.contract" class="font-semibold" data-testid="current-contract">
       Contrat : {{ contractText(round.contract) }} par {{ nameOfSeat(view, round.contract.seat) }}
     </p>
-    <p v-else class="muted">Aucune enchère pour l’instant.</p>
-    <ol
-      v-if="round.bids.length"
-      class="muted flex flex-wrap gap-x-3 gap-y-1 text-sm"
-      aria-label="Historique des enchères"
-    >
-      <li v-for="(b, i) in round.bids" :key="i">{{ bidText(view, b) }}</li>
-    </ol>
 
-    <p v-if="!myTurn && !view.pause" class="rounded-lg bg-slate-100 p-2" role="status">
+    <p v-if="!myTurn && !view.pause" class="rounded-xl bg-stone-200 p-3 text-center" role="status">
       Au tour de <strong>{{ turnName }}</strong> de parler.
     </p>
 
     <template v-if="myTurn && !view.pause">
-      <p class="font-semibold text-teal-900" role="status">C’est à vous de parler.</p>
-      <button
-        v-for="candidate in a.takeSuits"
-        :key="candidate"
-        class="btn btn-primary"
-        :disabled="busy"
-        @click="online.send('take', { suit: candidate })"
-      >
-        Prendre à {{ suitText(candidate) }}
-      </button>
+      <p v-if="!round.beloteDeal" class="rounded-xl bg-teal-700 p-2.5 text-center font-bold text-white" role="status">
+        À vous
+      </p>
+      <div v-if="round.beloteDeal" class="flex flex-col gap-2" data-testid="belote-take-options">
+        <p class="text-center font-semibold">{{ secondPass ? 'Choisir l’atout' : 'Prendre ?' }}</p>
+        <div
+          :class="secondPass ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-1 gap-2'"
+          role="group"
+          aria-label="Couleur d’atout"
+        >
+          <button
+            v-for="candidate in takeOptions"
+            :key="candidate"
+            class="btn relative"
+            :class="[
+              secondPass ? '!min-h-14 !px-1 !text-3xl' : 'btn-primary !min-h-14',
+              secondPass && (candidate === 'coeur' || candidate === 'carreau') ? '!text-suit-red' : '',
+              secondPass && candidate !== 'coeur' && candidate !== 'carreau' ? '!text-suit-black' : '',
+              secondPass && !a.takeSuits.includes(candidate) ? 'disabled:!bg-stone-100 disabled:!opacity-50' : '',
+            ]"
+            :disabled="busy || !a.takeSuits.includes(candidate)"
+            :aria-label="`Prendre à ${suitText(candidate)}${a.takeSuits.includes(candidate) ? '' : ', indisponible au deuxième tour'}`"
+            :title="
+              a.takeSuits.includes(candidate)
+                ? `Prendre à ${suitText(candidate)}`
+                : 'Couleur déjà proposée au premier tour'
+            "
+            @click="online.send('take', { suit: candidate })"
+          >
+            <span aria-hidden="true">{{ SUIT_SYMBOLS[candidate] }}</span>
+            <span v-if="!secondPass">Prendre</span>
+            <span
+              v-if="secondPass && !a.takeSuits.includes(candidate)"
+              class="absolute right-1 top-0 text-base font-black text-slate-900"
+              aria-hidden="true"
+              >×</span
+            >
+          </button>
+        </div>
+        <button
+          v-if="a.canPass"
+          class="btn !min-h-14 w-full"
+          :disabled="busy"
+          data-testid="pass"
+          @click="online.send('pass')"
+        >
+          Passer
+        </button>
+      </div>
       <div v-if="a.bid">
         <p class="label">Valeur</p>
-        <div class="grid grid-cols-3 gap-2" role="group" aria-label="Valeur du contrat">
+        <div class="grid grid-cols-5 gap-1.5" role="group" aria-label="Valeur du contrat">
           <button
             v-for="v in values"
             :key="v"
-            class="btn"
+            class="btn !px-0"
             :class="value === v ? 'btn-primary' : ''"
             :aria-pressed="value === v"
             :disabled="busy"
@@ -119,15 +156,19 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
           <button
             v-for="s in SUITS"
             :key="s"
-            class="btn !text-2xl"
-            :class="[suit === s ? 'btn-primary' : '', s === 'coeur' || s === 'carreau' ? '!text-red-700' : '']"
+            class="btn !min-h-14 !text-3xl"
+            :class="[
+              suit === s ? 'btn-primary !ring-4 !ring-gold' : '',
+              s === 'coeur' || s === 'carreau' ? '!text-suit-red' : '',
+            ]"
             :aria-pressed="suit === s"
             :aria-label="SUIT_LABELS[s]"
             :disabled="busy"
             data-testid="bid-suit"
             @click="suit = s"
           >
-            <span :class="suit === s ? '!text-white' : ''">{{ SUIT_SYMBOLS[s] }}</span>
+            <span :class="suit === s ? '!text-white' : ''">{{ SUIT_SYMBOLS[s] }}</span
+            ><span class="sr-only">{{ SUIT_LABELS[s] }}</span>
           </button>
         </div>
         <button
@@ -136,10 +177,10 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
           data-testid="bid-confirm"
           @click="announce"
         >
-          {{ value && suit ? `Annoncer ${value} ${SUIT_SYMBOLS[suit]}` : 'Choisissez une valeur et une couleur' }}
+          {{ value && suit ? `Annoncer ${value} ${SUIT_SYMBOLS[suit]}` : 'Valeur + atout' }}
         </button>
       </div>
-      <div class="grid grid-cols-2 gap-2">
+      <div v-if="!round.beloteDeal" class="grid grid-cols-2 gap-2">
         <button v-if="a.canPass" class="btn !min-h-14" :disabled="busy" data-testid="pass" @click="online.send('pass')">
           Passer
         </button>
@@ -161,7 +202,7 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
         <template v-if="a.capot.suggestedSuits.length">
           Couleurs déjà annoncées par votre équipe : {{ a.capot.suggestedSuits.map((s) => suitText(s)).join(', ') }}.
         </template>
-        Choisissez explicitement la couleur : aucune n’est retenue à votre place.
+        Couleur obligatoire · aucune sélection automatique.
       </p>
       <div class="grid grid-cols-4 gap-2">
         <button

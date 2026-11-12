@@ -12,7 +12,7 @@ const abandoned = computed(() => props.view.status === 'abandoned')
 
 <template>
   <div class="flex flex-col gap-3" data-testid="result">
-    <section class="card text-center">
+    <section class="card text-center !border-gold !border-2">
       <h2 class="text-2xl font-bold">{{ abandoned ? 'Partie abandonnée' : 'Partie terminée' }}</h2>
       <p v-if="abandoned" class="muted">Aucune victoire n’est attribuée à une partie abandonnée.</p>
       <p v-else-if="r.winnerTeam != null" class="mt-1 text-xl font-semibold" data-testid="winner">

@@ -28,7 +28,7 @@ const isChelem = (t: TarotBonusType) => t === 'petitChelem' || t === 'grandChele
 </script>
 
 <template>
-  <PlayerSelect v-model="f.takerId" label="Joueur preneur" :ids="active" />
+  <PlayerSelect v-model="f.takerId" label="Qui a pris ?" :ids="active" tiles />
   <SegmentedChoice
     v-model="f.contract"
     label="Contrat"

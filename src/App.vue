@@ -29,14 +29,14 @@ const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
     </main>
     <nav
       v-if="!inRoom"
-      class="fixed inset-x-0 bottom-0 z-10 border-t-2 border-slate-300 bg-white"
+      class="fixed inset-x-0 bottom-0 z-10 border-t border-stone-300 bg-white pb-[env(safe-area-inset-bottom)]"
       aria-label="Navigation principale"
     >
       <ul class="mx-auto flex max-w-2xl">
         <li
           v-for="l in [
             ['/', 'Accueil', '🏠'],
-            ['/soirees', 'Soirées', '🌙'],
+            ['/en-ligne', 'En ligne', '🌐'],
             ['/classements', 'Classements', '🏆'],
             ['/parametres', 'Réglages', '⚙️'],
           ]"
@@ -45,9 +45,8 @@ const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
         >
           <RouterLink
             :to="l[0]"
-            class="flex min-h-14 flex-col items-center justify-center text-sm font-semibold"
-            active-class="bg-teal-50 text-teal-900 underline"
-            exact-active-class="bg-teal-50 text-teal-900 underline"
+            class="flex min-h-14 flex-col items-center justify-center border-t-4 border-transparent text-sm font-semibold text-slate-700"
+            exact-active-class="!border-gold bg-teal-50 text-teal-900"
           >
             <span aria-hidden="true">{{ l[2] }}</span
             >{{ l[1] }}

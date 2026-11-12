@@ -9,6 +9,7 @@ async function startGame(players: Player[], rules: { target: number }) {
   const host = players[0].page
   await host.getByTestId('room-code').waitFor()
   // Règles : l'hôte les enregistre (cela remet les « prêt » à zéro), puis tout le monde se déclare prêt.
+  await host.getByTestId('rules-toggle').click()
   await host.locator('#target').fill(String(rules.target))
   await host.locator('#dealer').selectOption('3') // la place 4 donne : la place 1 parle et entame
   await host.locator('#gname').fill('Soirée e2e')
@@ -84,7 +85,7 @@ test('parcours complet : salon, places, enchères, donne, nouvelle donne, reconn
     await players[3].page.getByTestId('next-round').click()
     for (const p of players) await expect(p.page.getByTestId('bidding')).toBeVisible()
     // Le donneur a tourné : la place 1 est donneuse, Bob (place 2) parle en premier.
-    await expect(players[1].page.getByText('C’est à vous de parler.')).toBeVisible()
+    await expect(players[1].page.getByText('À vous', { exact: true })).toBeVisible()
 
     // Déconnexion de Dan : pause pour les autres ; retour avec la même main.
     const danHand = await players[3].page

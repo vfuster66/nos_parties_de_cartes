@@ -18,19 +18,36 @@ const complement = computed(() => {
   const v = parseNum(f.value.points)
   return Number.isInteger(v) && v >= 0 && v <= 162 ? 162 - v : null
 })
+const suits = Object.keys(SUIT_LABELS) as Suit[]
 const tn = (i: 0 | 1) => data.gameTeamName(props.game, i)
 </script>
 
 <template>
-  <PlayerSelect v-model="f.takerId" label="Joueur preneur" :ids="game.playerIds" />
+  <PlayerSelect v-model="f.takerId" label="Qui a pris ?" :ids="game.playerIds" tiles />
   <p v-if="team != null" class="ok">Équipe preneuse : {{ tn(team) }}</p>
-  <SegmentedChoice
-    v-model="f.trump"
-    label="Couleur d’atout"
-    :options="
-      (Object.keys(SUIT_LABELS) as Suit[]).map((s) => ({ value: s, label: `${SUIT_SYMBOLS[s]} ${SUIT_LABELS[s]}` }))
-    "
-  />
+  <fieldset>
+    <legend class="label">Couleur d’atout</legend>
+    <div class="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Couleur d’atout">
+      <button
+        v-for="s in suits"
+        :key="s"
+        type="button"
+        role="radio"
+        :aria-checked="f.trump === s"
+        class="btn !min-h-16 flex-col !gap-0 !px-1"
+        :class="f.trump === s ? 'btn-primary !ring-4 !ring-gold' : ''"
+        @click="f.trump = s"
+      >
+        <span
+          class="text-3xl leading-none"
+          :class="f.trump === s ? 'text-white' : s === 'coeur' || s === 'carreau' ? 'text-suit-red' : ''"
+          aria-hidden="true"
+          >{{ SUIT_SYMBOLS[s] }}</span
+        >
+        <span class="text-sm">{{ SUIT_LABELS[s] }}</span>
+      </button>
+    </div>
+  </fieldset>
   <slot name="contract" />
   <template v-if="!noPoints">
     <SegmentedChoice

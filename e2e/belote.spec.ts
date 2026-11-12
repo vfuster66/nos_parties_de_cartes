@@ -6,6 +6,7 @@ test('belote avec annonces : deuxième tour, donne complète et score partagé',
   const host = players[0].page
   try {
     await createAndJoin(players, 'belote-annonces')
+    await host.getByTestId('rules-toggle').click()
     await expect(host.locator('#target')).toHaveValue('1000')
     await host.locator('#dealer').selectOption('3')
     await host.getByTestId('save-config').click()
@@ -14,16 +15,16 @@ test('belote avec annonces : deuxième tour, donne complète et score partagé',
     await host.getByTestId('start').click()
     for (const player of players) {
       await expect(player.page.getByTestId('hand-card')).toHaveCount(5)
-      await expect(player.page.getByTestId('bidding')).toContainText('Tour 1/2')
+      await expect(player.page.getByTestId('bidding')).toContainText('1er tour')
     }
     await expect(host.getByRole('button', { name: /^Prendre à/ })).toHaveCount(1)
     for (const player of players) await player.page.getByTestId('pass').click()
-    await expect(host.getByTestId('bidding')).toContainText('Tour 2/2')
-    await expect(host.getByRole('button', { name: /^Prendre à/ })).toHaveCount(3)
-    await host
-      .getByRole('button', { name: /^Prendre à/ })
-      .first()
-      .click()
+    await expect(host.getByTestId('bidding')).toContainText('2e tour')
+    const suitOptions = host.getByRole('group', { name: 'Couleur d’atout' }).getByRole('button')
+    await expect(suitOptions).toHaveCount(4)
+    await expect(host.getByRole('group', { name: 'Couleur d’atout' }).locator('button:disabled')).toHaveCount(1)
+    await expect(host.getByTestId('belote-take-options').getByTestId('pass')).toBeVisible()
+    await host.getByRole('group', { name: 'Couleur d’atout' }).locator('button:not(:disabled)').first().click()
     for (const player of players) await expect(player.page.getByTestId('hand-card')).toHaveCount(8)
     await playAllCards(players, 'round-summary')
     const totals = await Promise.all(players.map((p) => p.page.getByTestId('totals').innerText()))

@@ -25,12 +25,8 @@ const teams = computed(() => teamRanking(data.stats, k.value))
       { value: 'all' as const, label: 'Tous (mélangés)' },
     ]"
   />
-  <p v-if="kind === 'all'" class="note mt-3">
-    Ce bilan mélange les jeux : il ne compare que participations, victoires et taux, jamais des scores bruts.
-  </p>
-  <p class="muted my-3">
-    Seules les parties terminées comptent. Tri : victoires, puis taux de victoire ; les égalités sont conservées.
-  </p>
+  <p v-if="kind === 'all'" class="note mt-3">Jeux mélangés · participations et victoires comparées, pas les scores.</p>
+  <p class="muted my-3">Parties terminées · victoires puis taux · égalités conservées.</p>
   <section class="card mb-4" aria-labelledby="cj">
     <h2 id="cj" class="mb-2 text-xl font-bold">Joueurs</h2>
     <RankTable :rows="players" caption="Classement des joueurs" link-base="/joueur" />
