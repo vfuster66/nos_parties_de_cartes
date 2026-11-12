@@ -15,6 +15,8 @@ export interface Participant {
   id: string
   nickname: string
   joinedAt: number
+  /** Joueur contrôlé par le serveur, sans connexion ni session utilisateur. */
+  isBot?: true
 }
 
 export type OnlineGame = 'coinche' | 'belote' | 'belote-annonces' | 'tarot' | 'tarot-3' | 'tarot-5' | 'tarot-6'

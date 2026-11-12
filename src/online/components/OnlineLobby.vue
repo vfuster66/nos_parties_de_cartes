@@ -183,7 +183,8 @@ async function closeRoom(): Promise<void> {
                 </p>
                 <p class="mt-0.5 flex flex-wrap gap-1">
                   <span v-if="part(view.seats[s])?.isHost" class="badge bg-stone-200">Hôte</span>
-                  <span v-if="!part(view.seats[s])?.connected" class="badge bg-red-100 text-red-900">○ Hors ligne</span>
+                  <span v-if="part(view.seats[s])?.isBot" class="badge bg-indigo-100 text-indigo-900">🤖 IA</span>
+                  <span v-else-if="!part(view.seats[s])?.connected" class="badge bg-red-100 text-red-900">○ Hors ligne</span>
                   <span v-if="part(view.seats[s])?.ready" class="badge bg-teal-100 text-teal-900">✓ Prêt</span>
                   <span v-else class="badge bg-amber-100 text-amber-900">… Pas prêt</span>
                 </p>
@@ -227,6 +228,15 @@ async function closeRoom(): Promise<void> {
           </details>
         </li>
       </ul>
+      <button
+        v-if="a.canManageSeats && a.freeSeats.length"
+        class="btn mt-2 w-full !min-h-12"
+        :disabled="busy"
+        data-testid="fill-bots"
+        @click="online.send('fillBots')"
+      >
+        🤖 Compléter avec l’IA
+      </button>
       <button
         v-if="a.canLeaveSeat"
         class="btn mt-2 w-full !min-h-11"

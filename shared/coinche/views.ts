@@ -28,6 +28,7 @@ export interface ParticipantView {
   connected: boolean
   ready: boolean
   isHost: boolean
+  isBot: boolean
 }
 
 export interface RoundRecordView {
@@ -208,7 +209,9 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
   const absent = isPaused(state, connected)
   const paused = state.status === 'playing' && absent
   const r = state.round
-  const disconnectedSeats = state.seats.flatMap((id, index) => (id && !connected.has(id) ? [index as Seat] : []))
+  const disconnectedSeats = state.seats.flatMap((id, index) =>
+    id && !connected.has(id) && !state.participants.find((p) => p.id === id)?.isBot ? [index as Seat] : [],
+  )
   let round: RoundView | null = null
   if (r) {
     const w = r.window
@@ -261,9 +264,10 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
       id: p.id,
       nickname: p.nickname,
       seat: seatOf(state, p.id),
-      connected: connected.has(p.id),
+      connected: !!p.isBot || connected.has(p.id),
       ready: state.readyIds.includes(p.id),
       isHost: state.hostId === p.id,
+      isBot: !!p.isBot,
     })),
     seats: [...state.seats],
     pause: paused

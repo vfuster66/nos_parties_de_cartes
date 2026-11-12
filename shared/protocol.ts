@@ -37,6 +37,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('takeSeat', { seat }),
   cmd('leaveSeat', {}),
   cmd('assignSeat', { participantId: id, seat: seat.nullable() }),
+  cmd('fillBots', {}),
   cmd('kick', { participantId: id }),
   cmd('setReady', { ready: z.boolean() }),
   cmd('leaveRoom', {}),

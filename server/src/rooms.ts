@@ -26,6 +26,7 @@ import {
 import { RuleError } from '../../shared/coinche/types'
 import type { MatchState } from '../../shared/coinche/types'
 import { buildView } from '../../shared/coinche/views'
+import { nextBotIntent } from '../../shared/coinche/bots'
 import type { Logger } from './logger'
 import { SlidingCounter, TokenBucket } from './ratelimit'
 import type { Store } from './store'
@@ -49,6 +50,7 @@ interface Room {
   state: MatchState
   sockets: Map<string, Sock>
   timer: NodeJS.Timeout | null
+  botTimer: NodeJS.Timeout | null
   /** Résultats récents par commande (idempotence : un doublon réseau reçoit le même accusé). */
   seen: Map<string, Ack<{ version: number }>>
 }
@@ -75,7 +77,7 @@ export class RoomManager {
     for (const st of this.d.store.loadActive()) {
       const paused = pauseWindow(st, Math.min(lastAliveAt, this.d.now()))
       if (paused !== st) this.d.store.saveRoom(paused, this.d.now())
-      this.rooms.set(st.id, { state: paused, sockets: new Map(), timer: null, seen: new Map() })
+      this.rooms.set(st.id, { state: paused, sockets: new Map(), timer: null, botTimer: null, seen: new Map() })
       this.byCode.set(st.code, st.id)
       n++
     }
@@ -139,6 +141,7 @@ export class RoomManager {
     }
     this.schedule(room)
     this.broadcast(room)
+    this.scheduleBot(room)
   }
 
   broadcast(room: Room): void {
@@ -155,6 +158,40 @@ export class RoomManager {
     const wait = Math.max(0, w.deadlineAt - this.d.now()) + 5
     room.timer = setTimeout(() => this.tick(room.state.id), wait)
     room.timer.unref?.()
+  }
+
+  /** Les joueurs automatiques jouent une seule action par tour, via le même moteur que les humains. */
+  private scheduleBot(room: Room): void {
+    if (room.botTimer) clearTimeout(room.botTimer)
+    room.botTimer = null
+    if (room.state.status !== 'playing') return
+    room.botTimer = setTimeout(() => {
+      room.botTimer = null
+      const connected = this.connected(room)
+      for (const participant of room.state.participants) {
+        if (!participant.isBot || !room.state.seats.includes(participant.id)) continue
+        const view = buildView(room.state, participant.id, connected, this.d.now())
+        const intent = nextBotIntent(view, this.d.randomInt)
+        if (!intent) continue
+        try {
+          const cmd = { ...intent, commandId: `bot:${randomUUID()}`, expectedVersion: room.state.version } as Command
+          const next = applyCommand(room.state, participant.id, cmd, {
+            now: this.d.now(),
+            paused: isPaused(room.state, connected),
+            randomInt: this.d.randomInt,
+          })
+          this.commit(room, ensureHost(next, connected))
+        } catch (error) {
+          this.d.log.error('action du joueur automatique refusée', {
+            room: room.state.id.slice(0, 6),
+            player: participant.id.slice(-1),
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+        return
+      }
+    }, 280)
+    room.botTimer.unref?.()
   }
 
   /** Ferme les fenêtres de surcoinche échues. Appelé par la minuterie ; exposé pour les tests (horloge injectée). */
@@ -205,7 +242,7 @@ export class RoomManager {
     if (live) return live
     const st = this.d.store.loadRoom(id)
     if (!st) return undefined
-    const room: Room = { state: st, sockets: new Map(), timer: null, seen: new Map() }
+    const room: Room = { state: st, sockets: new Map(), timer: null, botTimer: null, seen: new Map() }
     this.rooms.set(id, room)
     this.byCode.set(st.code, id)
     return room
@@ -233,7 +270,7 @@ export class RoomManager {
       this.d.store.insertRoom(state, now)
       this.d.store.setToken(state.id, pid, token)
     })()
-    const room: Room = { state, sockets: new Map(), timer: null, seen: new Map() }
+    const room: Room = { state, sockets: new Map(), timer: null, botTimer: null, seen: new Map() }
     this.rooms.set(state.id, room)
     this.byCode.set(state.code, state.id)
     this.attach(room, pid, socket)
@@ -384,6 +421,7 @@ export class RoomManager {
     const st = room.state
     if (room.sockets.size > 0 || (st.status !== 'finished' && st.status !== 'abandoned')) return
     if (room.timer) clearTimeout(room.timer)
+    if (room.botTimer) clearTimeout(room.botTimer)
     this.rooms.delete(st.id)
     this.byCode.delete(st.code)
   }
