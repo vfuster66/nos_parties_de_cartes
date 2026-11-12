@@ -29,6 +29,8 @@ export const onlineSeatCount = (game?: OnlineGame): 3 | 4 | 5 | 6 =>
 
 export interface Config {
   game?: OnlineGame
+  /** Agressivité des bots de coinche, de 1 (prudents) à 5 (offensifs). */
+  botDifficulty?: number
   tarotEndMode?: 'free' | 'threshold'
   /** Appels de couleur par double-tap, pour la belote et la coinche en ligne. */
   callsEnabled?: boolean

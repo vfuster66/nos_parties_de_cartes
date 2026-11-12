@@ -39,6 +39,7 @@ export function defaultConfig(): Config {
     target: 3000,
     firstDealer: 'random',
     callsEnabled: true,
+    botDifficulty: 2,
   }
 }
 
@@ -400,6 +401,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       lobbyOnly()
       hostOnly()
       if (cmd.gameName !== undefined) s.config.gameName = cmd.gameName
+      if (cmd.botDifficulty !== undefined && s.config.game === 'coinche') s.config.botDifficulty = cmd.botDifficulty
       if (cmd.teamNames) s.config.teamNames = cmd.teamNames
       if (cmd.rounding) s.config.rounding = cmd.rounding
       if (cmd.target) s.config.target = cmd.target

@@ -24,6 +24,7 @@ const form = reactive({
   team1: '',
   rounding: 'rounded' as 'rounded' | 'exact',
   target: 3000,
+  botDifficulty: 2,
   tarotEndMode: 'free' as 'free' | 'threshold',
   callsEnabled: true,
   firstDealer: 'random' as 'random' | Seat,
@@ -36,6 +37,7 @@ watch(
     form.team1 = c.teamNames[1]
     form.rounding = c.rounding
     form.target = c.target
+    form.botDifficulty = c.botDifficulty ?? 2
     form.tarotEndMode = c.tarotEndMode ?? 'free'
     form.callsEnabled = c.callsEnabled !== false
     form.firstDealer = c.firstDealer
@@ -53,6 +55,7 @@ const dirty = computed(() => {
     form.team1 !== c.teamNames[1] ||
     form.rounding !== c.rounding ||
     form.target !== c.target ||
+    form.botDifficulty !== (c.botDifficulty ?? 2) ||
     form.tarotEndMode !== (c.tarotEndMode ?? 'free') ||
     form.callsEnabled !== (c.callsEnabled !== false) ||
     form.firstDealer !== c.firstDealer
@@ -65,6 +68,7 @@ async function saveConfig(): Promise<void> {
     teamNames: [form.team0 || 'Équipe 1', form.team1 || 'Équipe 2'],
     rounding: form.rounding,
     target: form.target,
+    ...(props.view.config.game === 'coinche' ? { botDifficulty: form.botDifficulty } : {}),
     ...(tarot.value ? { tarotEndMode: form.tarotEndMode } : {}),
     ...(!tarot.value ? { callsEnabled: form.callsEnabled } : {}),
     firstDealer: form.firstDealer,
@@ -90,6 +94,9 @@ const gameTitle = computed(() =>
       : props.view.config.game === 'belote'
         ? 'Belote sans annonces'
         : 'Coinche',
+)
+const botDifficultyLabel = computed(
+  () => ['Très prudent', 'Prudent', 'Équilibré', 'Offensif', 'Très offensif'][form.botDifficulty - 1] ?? 'Prudent',
 )
 /** Éléments bloquants affichés dans la barre d’action. */
 const missing = computed(() => {
@@ -312,6 +319,23 @@ async function closeRoom(): Promise<void> {
           <input v-model="form.callsEnabled" type="checkbox" />
           <span>Appels de couleur · double-tap</span>
         </label>
+        <div v-if="view.config.game === 'coinche'">
+          <label class="label flex items-center justify-between" for="bot-difficulty">
+            <span>Niveau des bots</span>
+            <span class="font-semibold" aria-live="polite">{{ botDifficultyLabel }}</span>
+          </label>
+          <input
+            id="bot-difficulty"
+            v-model.number="form.botDifficulty"
+            class="w-full accent-emerald-700"
+            type="range"
+            min="1"
+            max="5"
+            step="1"
+            aria-label="Niveau des bots, de prudent à offensif"
+          />
+          <div class="muted flex justify-between text-xs"><span>Prudent</span><span>Offensif</span></div>
+        </div>
         <div>
           <label v-if="tarot" class="label">
             Fin de partie
@@ -356,6 +380,12 @@ async function closeRoom(): Promise<void> {
         <dd>{{ tarot || view.config.rounding === 'rounded' ? 'Arrondi' : 'Points réels' }}</dd>
         <dt v-if="!tarot" class="muted">Appels</dt>
         <dd v-if="!tarot">{{ view.config.callsEnabled === false ? 'Désactivés' : 'Double-tap' }}</dd>
+        <dt v-if="view.config.game === 'coinche'" class="muted">Niveau des bots</dt>
+        <dd v-if="view.config.game === 'coinche'">
+          {{
+            ['Très prudent', 'Prudent', 'Équilibré', 'Offensif', 'Très offensif'][(view.config.botDifficulty ?? 2) - 1]
+          }}
+        </dd>
         <dt class="muted">Objectif</dt>
         <dd>{{ view.config.target }}</dd>
         <dt class="muted">Premier donneur</dt>

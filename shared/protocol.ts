@@ -42,6 +42,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('setReady', { ready: z.boolean() }),
   cmd('leaveRoom', {}),
   cmd('configure', {
+    botDifficulty: z.number().int().min(1).max(5).optional(),
     gameName: cleanText(40).optional(),
     teamNames: z.tuple([cleanText(20), cleanText(20)]).optional(),
     rounding: z.enum(['rounded', 'exact']).optional(),

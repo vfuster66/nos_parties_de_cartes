@@ -36,10 +36,21 @@ function takeStrength(hand: Card[], suit: Suit): number {
   )
 }
 
-function playCard(view: RoomView, playable: Card[]): Card {
+function playCard(view: RoomView, playable: Card[], difficulty: number, randomInt: (n: number) => number): Card {
   const round = view.round!
   const trump = round.contract!.suit
   const trick = round.trick
+  // Aux niveaux bas, les bots jouent plus simplement et gardent davantage leurs cartes fortes.
+  const simplePlayChance = difficulty === 1 ? 55 : difficulty === 2 ? 25 : 0
+  if (simplePlayChance > 0 && playable.length > 1 && randomInt(100) < simplePlayChance) {
+    const lowCards = [...playable]
+      .sort(
+        (a, b) =>
+          cardPoints(a, trump) - cardPoints(b, trump) || cardPower(a, trump, trump) - cardPower(b, trump, trump),
+      )
+      .slice(0, Math.max(1, Math.ceil(playable.length / 2)))
+    return lowCards[randomInt(lowCards.length)]
+  }
   if (!trick.length) {
     const signal = round.callSignal
     if (signal && view.you.seat != null && partnerOf(signal.caller) === view.you.seat) {
@@ -131,21 +142,28 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
   }
 
   const a = view.actions
+  const difficulty = view.config.game === 'coinche' ? Math.max(1, Math.min(5, view.config.botDifficulty ?? 2)) : 3
   if (a.playable.length && view.round?.contract) {
-    return { type: 'playCard', card: playCard(view, a.playable) }
+    return { type: 'playCard', card: playCard(view, a.playable, difficulty, randomInt) }
   }
   if (a.canReadyNext) return { type: 'nextRound' }
   if (a.canSurcoinche) {
     const strength = takeStrength(view.hand, view.round?.contract?.suit ?? SUITS[0])
-    if (strength >= 14) return { type: 'surcoinche' }
+    if (strength >= [19, 17, 15, 14, 13][difficulty - 1]) return { type: 'surcoinche' }
     if (a.canAcceptCoinche) return { type: 'acceptCoinche' }
   }
   if (a.canAcceptCoinche) return { type: 'acceptCoinche' }
-  if (a.coinche && takeStrength(view.hand, view.round?.contract?.suit ?? SUITS[0]) >= 13)
+  if (
+    a.coinche &&
+    takeStrength(view.hand, view.round?.contract?.suit ?? SUITS[0]) >= [18, 16, 14, 12, 11][difficulty - 1]
+  )
     return { type: 'coinche', contractRef: a.coinche.contractRef }
   if (a.takeSuits.length) {
     const suit = [...a.takeSuits].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
-    const threshold = view.hand.length <= 5 ? (view.round?.beloteDeal?.pass === 2 ? 5.2 : 4.8) : 9.5
+    const threshold =
+      view.hand.length <= 5
+        ? [7.4, 6.2, 4.8, 4.6, 4.1][difficulty - 1] + (view.round?.beloteDeal?.pass === 2 ? 0.4 : 0)
+        : [14.5, 12, 9.5, 8.5, 7.5][difficulty - 1]
     if (takeStrength(view.hand, suit) >= threshold) return { type: 'take', suit }
     return { type: 'pass' }
   }
@@ -162,12 +180,22 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
       const currentStrength = takeStrength(view.hand, current.suit)
       const extra = signalRaise(view.hand, current.suit)
       const value = current.value + extra
-      if (currentStrength >= 6 || view.hand.some((card) => card.rank === 'A')) {
+      const supportThreshold = [9.5, 8, 6, 5.5, 5][difficulty - 1]
+      const hasAce = view.hand.some((card) => card.rank === 'A')
+      const strongSupport =
+        view.hand.filter((card) => card.rank === 'A').length >= 2 ||
+        (hasAce && view.hand.some((card) => card.suit === current.suit && (card.rank === 'V' || card.rank === '9')))
+      const canSupport =
+        difficulty === 3
+          ? currentStrength >= 6 || hasAce
+          : currentStrength >= supportThreshold && (difficulty > 1 || strongSupport)
+      if (canSupport) {
         if (value <= a.bid.max) return { type: 'bid', value, suit: current.suit }
       }
     }
     const suit = [...SUITS].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
-    if (takeStrength(view.hand, suit) >= 9.5) return { type: 'bid', value: a.bid.min, suit }
+    if (takeStrength(view.hand, suit) >= [14.5, 12, 9.5, 8.5, 7.5][difficulty - 1])
+      return { type: 'bid', value: a.bid.min, suit }
     return { type: 'pass' }
   }
   return a.canPass ? { type: 'pass' } : null
