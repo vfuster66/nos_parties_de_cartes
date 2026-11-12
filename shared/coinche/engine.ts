@@ -115,7 +115,7 @@ export function ensureHost(state: MatchState, connected: ReadonlySet<string>): M
 /** Vrai si une personne assise est déconnectée (la partie en cours est alors en pause). */
 export const isPaused = (state: MatchState, connected: ReadonlySet<string>): boolean =>
   (state.status === 'playing' || state.status === 'lobby') &&
-  state.seats.some((pid) => pid != null && !connected.has(pid))
+  state.seats.some((pid) => pid != null && !state.participants.find((p) => p.id === pid)?.isBot && !connected.has(pid))
 
 // ---------- Temps de la fenêtre de surcoinche ----------
 
@@ -335,6 +335,31 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       s.seats = s.seats.map((x) => (x === cmd.participantId ? null : x))
       if (cmd.seat != null) s.seats[cmd.seat] = cmd.participantId
       s.readyIds = s.readyIds.filter((x) => x !== cmd.participantId)
+      if (cmd.seat != null && s.participants.find((p) => p.id === cmd.participantId)?.isBot)
+        s.readyIds.push(cmd.participantId)
+      break
+    }
+    case 'fillBots': {
+      lobbyOnly()
+      hostOnly()
+      for (const seatIndex of s.seats.flatMap((pid, index) => (pid == null ? [index] : []))) {
+        const seat = seatIndex as Seat
+        const waitingBot = s.participants.find((p) => p.isBot && !s.seats.includes(p.id))
+        if (waitingBot) {
+          s.seats[seat] = waitingBot.id
+          if (!s.readyIds.includes(waitingBot.id)) s.readyIds.push(waitingBot.id)
+          continue
+        }
+        const id = `bot:${s.id}:${seat}`
+        let nickname = `Robot ${seat + 1}`
+        let suffix = 2
+        while (s.participants.some((p) => p.nickname.toLocaleLowerCase() === nickname.toLocaleLowerCase())) {
+          nickname = `Robot ${seat + 1} (${suffix++})`
+        }
+        s.participants.push({ id, nickname, joinedAt: ctx.now, isBot: true })
+        s.seats[seat] = id
+        s.readyIds.push(id)
+      }
       break
     }
     case 'kick': {
@@ -376,7 +401,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
           fail('invalid', 'Cette place ne peut pas être donneuse.')
         s.config.firstDealer = cmd.firstDealer
       }
-      s.readyIds = [] // tout le monde revalide les règles
+      s.readyIds = s.participants.filter((p) => p.isBot && s.seats.includes(p.id)).map((p) => p.id) // les humains revalident les règles
       break
     }
     case 'start': {
