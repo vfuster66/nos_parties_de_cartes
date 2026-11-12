@@ -10,7 +10,10 @@ const cardValue: Record<Card['rank'], number> = { '7': 0, '8': 1, '9': 2, '10': 
 
 function takeStrength(hand: Card[], suit: Suit): number {
   const cards = hand.filter((card) => card.suit === suit)
-  return cards.length * 2 + cards.reduce((n, card) => n + (card.rank === 'V' ? 3 : card.rank === '9' ? 2 : card.rank === 'A' ? 1 : 0), 0)
+  return (
+    cards.length * 2 +
+    cards.reduce((n, card) => n + (card.rank === 'V' ? 3 : card.rank === '9' ? 2 : card.rank === 'A' ? 1 : 0), 0)
+  )
 }
 
 function tarotStrength(hand: TarotCard[]): number {
@@ -58,7 +61,10 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
   if (a.playable.length && view.round?.contract) {
     const trump = view.round.contract.suit
     const cards = [...a.playable].sort((x, y) => {
-      const points = (card: Card) => (card.suit === trump ? ({ V: 20, '9': 14, A: 11, '10': 10, R: 4, D: 3, '8': 0, '7': 0 })[card.rank] : ({ A: 11, '10': 10, R: 4, D: 3, V: 2, '9': 0, '8': 0, '7': 0 })[card.rank])
+      const points = (card: Card) =>
+        card.suit === trump
+          ? { V: 20, '9': 14, A: 11, '10': 10, R: 4, D: 3, '8': 0, '7': 0 }[card.rank]
+          : { A: 11, '10': 10, R: 4, D: 3, V: 2, '9': 0, '8': 0, '7': 0 }[card.rank]
       return points(x) - points(y) || cardValue[x.rank] - cardValue[y.rank]
     })
     return { type: 'playCard', card: cards[0] }
