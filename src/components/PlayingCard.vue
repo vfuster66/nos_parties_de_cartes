@@ -11,6 +11,8 @@ const props = defineProps<{
   back?: boolean
   state?: 'normal' | 'playable' | 'blocked' | 'selected' | 'pending'
   highlight?: boolean
+  /** Figures épurées pour la belote et la coinche : rang et couleur au centre. */
+  simpleFigures?: boolean
 }>()
 const label = computed(() => (props.face && !props.back ? faceName(props.face) : 'Carte retournée'))
 const tone = computed(() => {
@@ -82,7 +84,7 @@ const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(pro
         >{{ stateMark }}</span
       >
       <svg
-        v-if="courtCard"
+        v-if="courtCard && !simpleFigures"
         class="absolute inset-x-[17%] top-[24%] h-[53%] w-[66%]"
         viewBox="0 0 100 130"
         role="presentation"
@@ -136,6 +138,13 @@ const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(pro
         </g>
         <rect x="5" y="3" width="90" height="124" rx="12" fill="none" stroke="#153c50" stroke-width="2" />
       </svg>
+      <span
+        v-else-if="courtCard && simpleFigures && face.kind === 'suit'"
+        class="absolute inset-x-[15%] inset-y-[28%] flex items-center justify-center rounded-lg border border-slate-200 bg-white"
+        aria-hidden="true"
+      >
+        <span class="text-[55cqw] leading-none">{{ faceSymbol(face) }}</span>
+      </span>
       <span
         v-else-if="face.kind === 'suit'"
         class="absolute inset-0 flex items-center justify-center pt-[14%] pl-[14%] text-[64cqw] opacity-95"

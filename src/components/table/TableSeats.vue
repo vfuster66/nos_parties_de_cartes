@@ -24,9 +24,9 @@ export interface TablePlay {
   face: Face
   winner?: boolean
 }
-const props = defineProps<{ seats: TableSeat[]; plays: TablePlay[]; fading?: boolean }>()
+const props = defineProps<{ seats: TableSeat[]; plays: TablePlay[]; fading?: boolean; simpleFigures?: boolean }>()
 const n = computed(() => props.seats.length)
-const height = computed(() => (n.value <= 3 ? '16rem' : n.value === 4 ? '18rem' : '21rem'))
+const height = computed(() => (n.value <= 3 ? '16rem' : n.value === 4 ? '17rem' : '21rem'))
 const cardW = computed(() => (n.value <= 4 ? '14%' : '11.5%'))
 
 const angle = (i: number) => (2 * Math.PI * i) / n.value
@@ -107,7 +107,7 @@ const role = (s: TableSeat): string[] =>
       :style="playStyle(p.seat)"
       data-testid="trick-card"
     >
-      <PlayingCard :face="p.face" :highlight="p.winner" />
+      <PlayingCard :face="p.face" :highlight="p.winner" :simple-figures="simpleFigures" />
     </div>
   </section>
 </template>

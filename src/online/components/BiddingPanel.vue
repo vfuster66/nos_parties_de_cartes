@@ -71,26 +71,26 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
 
 <template>
   <section
-    class="card flex flex-col gap-3 !border-teal-700 !border-2"
+    class="card flex flex-col gap-2 !border-teal-700 !border-2 !p-2"
     aria-labelledby="bid-title"
     data-testid="bidding"
   >
-    <h2 id="bid-title" class="eyebrow">{{ round.beloteDeal ? 'Prise d’atout' : 'Enchères' }}</h2>
-    <p v-if="round.beloteDeal" class="chip self-start">{{ secondPass ? '2e tour' : '1er tour' }}</p>
-    <p v-else-if="round.contract" class="font-semibold" data-testid="current-contract">
+    <h2 id="bid-title" class="eyebrow">
+      {{ round.beloteDeal ? (secondPass ? '2e tour · atout' : '1er tour · atout') : 'Enchères' }}
+    </h2>
+    <p v-if="!round.beloteDeal && round.contract" class="font-semibold" data-testid="current-contract">
       Contrat : {{ contractText(round.contract) }} par {{ nameOfSeat(view, round.contract.seat) }}
     </p>
 
-    <p v-if="!myTurn && !view.pause" class="rounded-xl bg-stone-200 p-3 text-center" role="status">
-      Au tour de <strong>{{ turnName }}</strong> de parler.
+    <p v-if="!myTurn && !view.pause" class="rounded-lg bg-stone-200 px-2 py-1 text-center text-sm" role="status">
+      ▶ <strong>{{ turnName }}</strong>
     </p>
 
     <template v-if="myTurn && !view.pause">
       <p v-if="!round.beloteDeal" class="rounded-xl bg-teal-700 p-2.5 text-center font-bold text-white" role="status">
         À vous
       </p>
-      <div v-if="round.beloteDeal" class="flex flex-col gap-2" data-testid="belote-take-options">
-        <p class="text-center font-semibold">{{ secondPass ? 'Choisir l’atout' : 'Prendre ?' }}</p>
+      <div v-if="round.beloteDeal" class="flex flex-col gap-1.5" data-testid="belote-take-options">
         <div
           :class="secondPass ? 'grid grid-cols-4 gap-2' : 'grid grid-cols-1 gap-2'"
           role="group"
@@ -101,7 +101,7 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
             :key="candidate"
             class="btn relative"
             :class="[
-              secondPass ? '!min-h-14 !px-1 !text-3xl' : 'btn-primary !min-h-14',
+              secondPass ? '!min-h-12 !px-1 !text-3xl' : 'btn-primary !min-h-12',
               secondPass && (candidate === 'coeur' || candidate === 'carreau') ? '!text-suit-red' : '',
               secondPass && candidate !== 'coeur' && candidate !== 'carreau' ? '!text-suit-black' : '',
               secondPass && !a.takeSuits.includes(candidate) ? 'disabled:!bg-stone-100 disabled:!opacity-50' : '',
@@ -127,7 +127,7 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
         </div>
         <button
           v-if="a.canPass"
-          class="btn !min-h-14 w-full"
+          class="btn !min-h-12 w-full"
           :disabled="busy"
           data-testid="pass"
           @click="online.send('pass')"

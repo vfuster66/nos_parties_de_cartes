@@ -191,8 +191,31 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
 <template>
   <div class="flex flex-col gap-2.5" data-testid="table">
     <!-- Scores, contrat, atout : toujours visibles, détail dans la feuille « Scores » -->
-    <header class="card !p-2" aria-label="Scores et contrat">
-      <div class="grid grid-cols-[1fr_1fr_auto] items-stretch gap-2 text-center">
+    <header class="card" :class="round.phase === 'playing' ? '!p-1.5' : '!p-2'" aria-label="Scores et contrat">
+      <div v-if="round.phase === 'playing'" class="grid grid-cols-[1fr_1fr_auto] items-center gap-1 text-center">
+        <div
+          v-for="t in [0, 1] as const"
+          :key="t"
+          class="flex items-center justify-center gap-1 rounded-lg px-1 py-0.5"
+          :class="t === myTeam ? 'bg-teal-100' : 'bg-stone-100'"
+          :data-testid="`score-${t}`"
+          :aria-label="`${t === myTeam ? 'Nous' : 'Eux'}, ${teamName(v, t)}, ${v.totals[t]} points, ${round.trickCounts[t]} plis`"
+        >
+          <span class="text-xs font-semibold">{{ t === myTeam ? 'Nous' : 'Eux' }}</span>
+          <span class="text-lg font-black leading-none">{{ v.totals[t] }}</span>
+          <span class="text-xs text-slate-600">· {{ round.trickCounts[t] }} plis</span>
+        </div>
+        <button
+          class="btn !min-h-0 !px-2 !py-1 text-sm"
+          type="button"
+          data-testid="open-scores"
+          aria-label="Ouvrir le score détaillé"
+          @click="scoresOpen = true"
+        >
+          📋
+        </button>
+      </div>
+      <div v-else class="grid grid-cols-[1fr_1fr_auto] items-stretch gap-2 text-center">
         <div
           v-for="t in [0, 1] as const"
           :key="t"
@@ -214,15 +237,23 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
         </button>
       </div>
       <p
-        class="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center text-sm font-semibold"
+        class="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center font-semibold"
+        :class="round.phase === 'playing' ? 'mt-0.5 text-xs leading-tight' : 'mt-1 text-sm'"
         data-testid="contract-bar"
       >
         <template v-if="contract">
-          <span class="chip !border-gold !bg-gold-soft">Contrat {{ contractText(contract) }}</span>
-          <span>preneur : {{ nameOfSeat(v, contract.seat) }}</span>
-          <span v-if="round.level !== 'none'" class="badge !bg-red-700 !text-white !text-sm">{{
-            levelText(round.level)
+          <span class="chip !border-gold !bg-gold-soft" :class="round.phase === 'playing' ? '!px-1.5 !py-0' : ''"
+            >Contrat {{ contractText(contract) }}</span
+          >
+          <span>{{
+            round.phase === 'playing' ? nameOfSeat(v, contract.seat) : `preneur : ${nameOfSeat(v, contract.seat)}`
           }}</span>
+          <span
+            v-if="round.level !== 'none'"
+            class="badge !bg-red-700 !text-white"
+            :class="round.phase === 'playing' ? '!text-xs' : '!text-sm'"
+            >{{ levelText(round.level) }}</span
+          >
         </template>
         <span v-else class="muted !text-sm">Donne {{ round.index + 1 }} · pas encore de contrat</span>
       </p>
@@ -268,14 +299,14 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
         v-if="round.beloteDeal"
         class="col-span-4 flex items-center justify-center gap-3 rounded-xl bg-teal-800 p-1.5 text-white"
       >
-        <span class="w-9"><PlayingCard :face="faceOfCard(round.beloteDeal.turned)" /></span>
+        <span class="w-9"><PlayingCard :face="faceOfCard(round.beloteDeal.turned)" simple-figures /></span>
         <span class="text-sm font-semibold">Carte retournée<br />{{ cardName(round.beloteDeal.turned) }}</span>
       </div>
     </section>
 
     <!-- Table -->
     <div v-else class="relative">
-      <TableSeats :seats="tableSeats" :plays="plays" :fading="centerIsShown" />
+      <TableSeats :seats="tableSeats" :plays="plays" :fading="centerIsShown" simple-figures />
       <p
         v-if="announce"
         class="anim-drop absolute inset-x-12 top-2 z-30 rounded-xl bg-gold p-1.5 text-center text-base font-bold text-slate-900 shadow-lg"
@@ -320,7 +351,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       <p class="px-3 pt-2 text-sm font-semibold text-slate-700">
         Votre main · {{ v.hand.length }} carte{{ v.hand.length > 1 ? 's' : '' }}
       </p>
-      <HandFan :items="handItems" label="Cartes de votre main" compact @tap="tapKey" />
+      <HandFan :items="handItems" label="Cartes de votre main" compact simple-figures @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>
     </section>
     <!-- Phase -->
@@ -351,7 +382,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
             <span class="sr-only"> : {{ entry.cards.map(cardName).join(', ') }}</span>
             <span class="mt-0.5 flex gap-1" aria-hidden="true">
               <span v-for="c in entry.cards" :key="c.suit + c.rank" class="w-9"
-                ><PlayingCard :face="faceOfCard(c)"
+                ><PlayingCard :face="faceOfCard(c)" simple-figures
               /></span>
             </span>
           </li>
@@ -371,7 +402,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       <p class="px-3 text-xs font-medium text-slate-700" aria-label="Repères de la main">
         ▶ Jouable · ✓ sélectionnée · × indisponible
       </p>
-      <HandFan :items="handItems" label="Cartes de votre main" @tap="tapKey" />
+      <HandFan :items="handItems" label="Cartes de votre main" simple-figures @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>
     </section>
     <div
@@ -395,7 +426,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
     <!-- Scores et historique -->
     <BottomSheet v-if="previewCard" :title="`Aperçu : ${cardName(previewCard)}`" @close="previewCard = null">
       <div class="mx-auto w-48 max-w-[70vw]" data-testid="card-preview">
-        <PlayingCard :face="faceOfCard(previewCard)" />
+        <PlayingCard :face="faceOfCard(previewCard)" simple-figures />
       </div>
       <p class="mt-3 text-center text-lg font-bold">{{ cardName(previewCard) }}</p>
       <p class="text-center text-sm text-slate-700">Cette carte n’est pas jouée.</p>
@@ -444,7 +475,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
           :key="t.seat"
           class="flex flex-col items-center gap-1 text-center text-sm"
         >
-          <PlayingCard :face="faceOfCard(t.card)" :highlight="t.seat === round.lastTrick.winner" />
+          <PlayingCard :face="faceOfCard(t.card)" :highlight="t.seat === round.lastTrick.winner" simple-figures />
           <span class="w-full truncate">{{ nameOfSeat(v, t.seat) }}</span>
         </li>
       </ul>

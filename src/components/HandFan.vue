@@ -14,16 +14,16 @@ export interface HandItem {
   disabled?: boolean
   pressed?: boolean
 }
-const props = defineProps<{ items: HandItem[]; label: string; compact?: boolean }>()
+const props = defineProps<{ items: HandItem[]; label: string; compact?: boolean; simpleFigures?: boolean }>()
 const emit = defineEmits<{ tap: [key: string] }>()
 const cols = computed(() => {
   const n = props.items.length
   // Une main de 24 cartes passe sur quatre rangées de six : cartes plus larges,
   // cibles tactiles séparées et indices lisibles sur les petits écrans.
-  return props.compact ? Math.max(n, 1) : n <= 8 ? 4 : n <= 24 ? 6 : 8
+  return props.compact ? Math.min(Math.max(n, 1), 5) : n <= 8 ? 4 : n <= 24 ? 6 : 8
 })
 const maxCard = computed(() =>
-  props.compact ? '3.4rem' : cols.value === 4 ? '4.75rem' : props.items.length > 12 ? '2.85rem' : '4rem',
+  props.compact ? '3.8rem' : cols.value === 4 ? '4.75rem' : props.items.length > 12 ? '2.85rem' : '4rem',
 )
 </script>
 
@@ -53,7 +53,7 @@ const maxCard = computed(() =>
         :data-state="it.state"
         @click="emit('tap', it.key)"
       >
-        <PlayingCard :face="it.face" :state="it.state" />
+        <PlayingCard :face="it.face" :state="it.state" :simple-figures="simpleFigures" />
       </button>
     </li>
   </ul>
