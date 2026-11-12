@@ -30,6 +30,8 @@ export const onlineSeatCount = (game?: OnlineGame): 3 | 4 | 5 | 6 =>
 export interface Config {
   game?: OnlineGame
   tarotEndMode?: 'free' | 'threshold'
+  /** Appels de couleur par double-tap, pour la belote et la coinche en ligne. */
+  callsEnabled?: boolean
   gameName: string
   teamNames: [string, string]
   rounding: RoundingMode
@@ -113,6 +115,8 @@ export interface RoundState {
   trick: TrickCard[]
   tricks: PlayedTrick[]
   beloteEvents: BeloteEvent[]
+  /** Appel encore à transmettre au partenaire, consommé à sa prochaine entame. */
+  activeCall?: { seat: Seat; suit: Suit }
   readyForNext: Seat[]
 }
 

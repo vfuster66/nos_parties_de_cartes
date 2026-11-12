@@ -41,6 +41,28 @@ watch(
 const busy = computed(() => !!online.pending)
 const myTurn = computed(() => round.value.turn === props.view.you.seat)
 const canBid = computed(() => value.value != null && suit.value != null && !busy.value)
+const partnerRaises = computed(() => {
+  const contract = round.value.contract
+  const bid = a.value.bid
+  const seat = props.view.you.seat
+  if (
+    !contract ||
+    typeof contract.value !== 'number' ||
+    !bid ||
+    seat == null ||
+    contract.seat === seat ||
+    contract.seat % 2 !== seat % 2
+  )
+    return []
+  const currentValue = contract.value
+  return [10, 20].filter((raise) => currentValue + raise <= bid.max)
+})
+
+async function quickRaise(raise: number): Promise<void> {
+  const contract = round.value.contract
+  if (!contract || typeof contract.value !== 'number' || busy.value) return
+  await online.send('bid', { value: contract.value + raise, suit: contract.suit })
+}
 
 async function announce(): Promise<void> {
   if (value.value == null || !suit.value) return
@@ -136,6 +158,27 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
         </button>
       </div>
       <div v-if="a.bid">
+        <div
+          v-if="partnerRaises.length"
+          class="mb-2 flex items-center gap-2"
+          role="group"
+          aria-label="Relances rapides"
+        >
+          <span class="text-sm font-semibold">{{ SUIT_SYMBOLS[round.contract!.suit] }}</span>
+          <button
+            v-for="raise in partnerRaises"
+            :key="raise"
+            class="btn !min-h-10 flex-1"
+            :disabled="busy"
+            :aria-label="`Relancer de ${raise} dans ${suitText(round.contract!.suit)}`"
+            :title="
+              raise === 10 ? 'Atout fort (valet ou neuf) ou un as' : 'Deux as, ou un as avec valet ou neuf d’atout'
+            "
+            @click="quickRaise(raise)"
+          >
+            +{{ raise }}
+          </button>
+        </div>
         <p class="label">Valeur</p>
         <div class="grid grid-cols-5 gap-1.5" role="group" aria-label="Valeur du contrat">
           <button

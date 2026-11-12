@@ -12,6 +12,7 @@ import {
   hasBelote,
   LAST_TRICK_BONUS,
   nextSeat,
+  partnerOf,
   sameCard,
   shuffleDeck,
   teamOf,
@@ -31,7 +32,14 @@ export interface Ctx {
 }
 
 export function defaultConfig(): Config {
-  return { gameName: '', teamNames: ['Équipe 1', 'Équipe 2'], rounding: 'rounded', target: 3000, firstDealer: 'random' }
+  return {
+    gameName: '',
+    teamNames: ['Équipe 1', 'Équipe 2'],
+    rounding: 'rounded',
+    target: 3000,
+    firstDealer: 'random',
+    callsEnabled: true,
+  }
 }
 
 export function newMatch(
@@ -396,6 +404,7 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
       if (cmd.rounding) s.config.rounding = cmd.rounding
       if (cmd.target) s.config.target = cmd.target
       if (cmd.tarotEndMode && isOnlineTarot(s.config.game)) s.config.tarotEndMode = cmd.tarotEndMode
+      if (cmd.callsEnabled !== undefined && !isOnlineTarot(s.config.game)) s.config.callsEnabled = cmd.callsEnabled
       if (cmd.firstDealer !== undefined) {
         if (cmd.firstDealer !== 'random' && cmd.firstDealer >= s.seats.length)
           fail('invalid', 'Cette place ne peut pas être donneuse.')
@@ -536,6 +545,14 @@ function gameCommand(s: MatchState, seat: Seat | null, cmd: Command, ctx: Ctx): 
       playCard(s, r, me, cmd.card, ctx.now)
       break
     }
+    case 'callSuit': {
+      if (r.phase !== 'playing' || s.config.callsEnabled === false || isOnlineTarot(s.config.game))
+        fail('wrong_phase', 'Les appels de couleur ne sont pas activés pour cette partie.')
+      if (!r.hands[me].some((held) => held.suit === cmd.suit))
+        fail('illegal_card', 'Vous ne détenez aucune carte de cette couleur à appeler.')
+      r.activeCall = { seat: me, suit: cmd.suit }
+      break
+    }
     case 'nextRound': {
       if (r.phase !== 'summary') fail('wrong_phase', "La donne n'est pas terminée.")
       if (s.status !== 'playing') fail('wrong_phase', 'La partie est terminée.')
@@ -607,6 +624,7 @@ function playCard(s: MatchState, r: RoundState, me: Seat, card: Card, now: numbe
   if (!legal.some((x) => sameCard(x, card))) fail('illegal_card', "Cette carte n'est pas autorisée dans ce pli.")
   hand.splice(idx, 1)
   r.trick.push({ seat: me, card })
+  if (r.activeCall && r.trick.length === 1 && partnerOf(r.activeCall.seat) === me) delete r.activeCall
   // Belote-rebelote automatique, révélée seulement à la première carte concernée.
   if (r.beloteSeat === me && card.suit === c.suit && (card.rank === 'R' || card.rank === 'D')) {
     const done = r.beloteEvents.length

@@ -9,7 +9,7 @@ import type { Card, Seat, Suit, TeamIdx, TrickCard } from './cards'
 import { isPaused, seatOf } from './engine'
 import { takeSuits } from './belote'
 import { legalCards } from './rules'
-import { MAX_BID, MIN_BID } from './types'
+import { isOnlineTarot, MAX_BID, MIN_BID } from './types'
 import type {
   BeloteEvent,
   BidEntry,
@@ -76,6 +76,8 @@ export interface RoundView {
   cardsLeft: [number, number, number, number]
   beloteEvents: BeloteEvent[]
   readyForNext: Seat[]
+  /** Visible uniquement pour le partenaire qui doit lire le signal. */
+  callSignal: { caller: Seat; suit: Suit } | null
 }
 
 export interface Actions {
@@ -94,6 +96,7 @@ export interface Actions {
   coinche: { contractRef: number } | null
   canSurcoinche: boolean
   canAcceptCoinche: boolean
+  canCallSuit: boolean
   // Jeu
   playable: Card[]
   canReadyNext: boolean
@@ -157,6 +160,7 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
     coinche: null,
     canSurcoinche: false,
     canAcceptCoinche: false,
+    canCallSuit: false,
     playable: [],
     canReadyNext: false,
     canAbandon: false,
@@ -200,6 +204,7 @@ export function allowedActions(state: MatchState, pid: string, paused: boolean):
   } else if (r.phase === 'summary' && state.status === 'playing') {
     a.canReadyNext = !r.readyForNext.includes(seat)
   }
+  a.canCallSuit = r.phase === 'playing' && state.config.callsEnabled !== false && !isOnlineTarot(state.config.game)
   return a
 }
 
@@ -250,6 +255,10 @@ export function buildView(state: MatchState, pid: string, connected: ReadonlySet
       // La belote n'apparaît qu'une fois la première carte jouée : beloteSeat reste privé.
       beloteEvents: r.beloteEvents.map((e) => ({ ...e })),
       readyForNext: [...r.readyForNext],
+      callSignal:
+        r.activeCall && seat != null && (seat + 2) % 4 === r.activeCall.seat
+          ? { caller: r.activeCall.seat, suit: r.activeCall.suit }
+          : null,
     }
   }
   const trump = r?.contract?.suit ?? null

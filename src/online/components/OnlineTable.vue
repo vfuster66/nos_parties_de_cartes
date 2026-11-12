@@ -77,7 +77,17 @@ const tableSeats = computed<TableSeat[]>(() =>
 const selected = ref<Card | null>(null)
 const previewCard = ref<Card | null>(null)
 const hint = ref('')
+const callNotice = ref('')
+const canCallSuit = computed(() => v.value.actions.canCallSuit)
+let lastCardTap: { key: string; at: number } | null = null
+let callNoticeTimer: ReturnType<typeof setTimeout> | null = null
 const isPlayable = (c: Card): boolean => v.value.actions.playable.some((x) => sameCard(x, c))
+async function callSuit(suit: Card['suit']): Promise<void> {
+  if (!(await online.send('callSuit', { suit }))) return
+  callNotice.value = `⚡ ${SUIT_SYMBOLS[suit]} appelé`
+  if (callNoticeTimer) clearTimeout(callNoticeTimer)
+  callNoticeTimer = setTimeout(() => (callNotice.value = ''), 2500)
+}
 function cardState(c: Card) {
   if (selected.value && sameCard(selected.value, c)) return online.pending === 'playCard' ? 'pending' : 'selected'
   if (!myTurnToPlay.value) return 'normal'
@@ -85,6 +95,15 @@ function cardState(c: Card) {
 }
 function tap(c: Card): void {
   hint.value = ''
+  const key = `${c.suit}:${c.rank}`
+  const now = Date.now()
+  if (canCallSuit.value && lastCardTap?.key === key && now - lastCardTap.at <= 350) {
+    lastCardTap = null
+    selected.value = null
+    void callSuit(c.suit)
+    return
+  }
+  lastCardTap = { key, at: now }
   if (!myTurnToPlay.value) {
     hint.value =
       round.value.phase === 'playing' ? "Ce n'est pas votre tour." : 'La phase de jeu des cartes n’a pas commencé.'
@@ -123,6 +142,7 @@ watch(
   },
 )
 onBeforeUnmount(() => shownTimer && clearTimeout(shownTimer))
+onBeforeUnmount(() => callNoticeTimer && clearTimeout(callNoticeTimer))
 const lastOpen = ref(false)
 const scoresOpen = ref(false)
 const centerCards = computed(() => (round.value.trick.length ? round.value.trick : (shown.value?.cards ?? [])))
@@ -267,6 +287,18 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
         retour.
       </p>
     </div>
+
+    <p
+      v-if="round.callSignal"
+      class="rounded-xl border-2 border-gold bg-gold-soft px-2 py-1 text-center font-bold"
+      role="status"
+      data-testid="call-signal"
+    >
+      🔔 {{ nameOfSeat(v, round.callSignal.caller) }} · maître à {{ SUIT_SYMBOLS[round.callSignal.suit] }}
+    </p>
+    <p v-else-if="callNotice" class="text-center text-sm font-semibold text-teal-800" role="status">
+      {{ callNotice }}
+    </p>
     <div v-if="online.error" class="err" role="alert">
       {{ online.error }}
       <button class="btn mt-2 w-full" @click="online.error = null">Fermer ce message</button>
@@ -401,6 +433,9 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       </p>
       <p class="px-3 text-xs font-medium text-slate-700" aria-label="Repères de la main">
         ▶ Jouable · ✓ sélectionnée · × indisponible
+      </p>
+      <p v-if="canCallSuit" class="px-3 text-xs font-semibold text-teal-800" aria-label="Appel de couleur">
+        ⚡ Double-tap : appeler la couleur
       </p>
       <HandFan :items="handItems" label="Cartes de votre main" simple-figures @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>

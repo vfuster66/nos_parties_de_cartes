@@ -1,4 +1,4 @@
-import { cardPoints, cardPower, teamOf, trickWinner } from './cards'
+import { cardPoints, cardPower, partnerOf, teamOf, trickWinner } from './cards'
 import { halfPoints as tarotHalfPoints, isBout as isTarotBout, isTrump as isTarotTrump } from '../tarot/cards'
 import type { TarotCard } from '../tarot/cards'
 import type { Card, Suit } from './cards'
@@ -41,6 +41,11 @@ function playCard(view: RoomView, playable: Card[]): Card {
   const trump = round.contract!.suit
   const trick = round.trick
   if (!trick.length) {
+    const signal = round.callSignal
+    if (signal && view.you.seat != null && partnerOf(signal.caller) === view.you.seat) {
+      const calledSuit = playable.filter((card) => card.suit === signal.suit)
+      if (calledSuit.length) return [...calledSuit].sort((a, b) => cardPoints(a, trump) - cardPoints(b, trump))[0]
+    }
     const sideAces = playable.filter((card) => card.suit !== trump && card.rank === 'A')
     if (sideAces.length) return sideAces[0]
     const trumpCards = playable.filter((card) => card.suit === trump)
@@ -74,6 +79,14 @@ function playCard(view: RoomView, playable: Card[]): Card {
   return [...playable].sort(
     (a, b) => cardPoints(b, trump) - cardPoints(a, trump) || cardPower(b, trump, led) - cardPower(a, trump, led),
   )[0]
+}
+
+function signalRaise(hand: Card[], suit: Suit): number {
+  const hasTopTrump = hand.some((card) => card.suit === suit && (card.rank === 'V' || card.rank === '9'))
+  const aces = hand.filter((card) => card.rank === 'A').length
+  if (aces >= 2 || (hasTopTrump && aces >= 1)) return 20
+  if (hasTopTrump || aces === 1) return 10
+  return 10
 }
 
 function tarotStrength(hand: TarotCard[]): number {
@@ -137,6 +150,22 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
     return { type: 'pass' }
   }
   if (a.bid) {
+    const current = view.round?.contract
+    const seat = view.you.seat
+    if (
+      current &&
+      typeof current.value === 'number' &&
+      seat != null &&
+      current.seat !== seat &&
+      teamOf(current.seat) === teamOf(seat)
+    ) {
+      const currentStrength = takeStrength(view.hand, current.suit)
+      const extra = signalRaise(view.hand, current.suit)
+      const value = current.value + extra
+      if (currentStrength >= 6 || view.hand.some((card) => card.rank === 'A')) {
+        if (value <= a.bid.max) return { type: 'bid', value, suit: current.suit }
+      }
+    }
     const suit = [...SUITS].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
     if (takeStrength(view.hand, suit) >= 9.5) return { type: 'bid', value: a.bid.min, suit }
     return { type: 'pass' }

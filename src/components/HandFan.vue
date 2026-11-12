@@ -37,7 +37,7 @@ const maxCard = computed(() =>
     <li v-for="it in items" :key="it.key">
       <button
         type="button"
-        class="block w-full rounded-lg p-0 transition-transform motion-reduce:transition-none"
+        class="block w-full touch-manipulation rounded-lg p-0 transition-transform motion-reduce:transition-none"
         :class="[
           it.state === 'selected' || it.state === 'pending'
             ? '-translate-y-2.5'

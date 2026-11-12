@@ -53,6 +53,7 @@ export const commandSchema = z.discriminatedUnion('type', [
       .refine((n) => n % 10 === 0, 'Multiple de 10')
       .optional(),
     tarotEndMode: z.enum(['free', 'threshold']).optional(),
+    callsEnabled: z.boolean().optional(),
     firstDealer: z.union([z.literal('random'), seat]).optional(),
   }),
   cmd('start', {}),
@@ -87,6 +88,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   cmd('surcoinche', {}),
   cmd('acceptCoinche', {}),
   cmd('playCard', { card }),
+  cmd('callSuit', { suit }),
   cmd('nextRound', {}),
 ])
 export type Command = z.infer<typeof commandSchema>
@@ -108,6 +110,7 @@ export const VERSIONED: ReadonlySet<CommandType> = new Set([
   'surcoinche',
   'acceptCoinche',
   'playCard',
+  'callSuit',
   'nextRound',
 ])
 

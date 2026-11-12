@@ -25,6 +25,7 @@ const form = reactive({
   rounding: 'rounded' as 'rounded' | 'exact',
   target: 3000,
   tarotEndMode: 'free' as 'free' | 'threshold',
+  callsEnabled: true,
   firstDealer: 'random' as 'random' | Seat,
 })
 watch(
@@ -36,6 +37,7 @@ watch(
     form.rounding = c.rounding
     form.target = c.target
     form.tarotEndMode = c.tarotEndMode ?? 'free'
+    form.callsEnabled = c.callsEnabled !== false
     form.firstDealer = c.firstDealer
   },
   { immediate: true, deep: true },
@@ -52,6 +54,7 @@ const dirty = computed(() => {
     form.rounding !== c.rounding ||
     form.target !== c.target ||
     form.tarotEndMode !== (c.tarotEndMode ?? 'free') ||
+    form.callsEnabled !== (c.callsEnabled !== false) ||
     form.firstDealer !== c.firstDealer
   )
 })
@@ -63,6 +66,7 @@ async function saveConfig(): Promise<void> {
     rounding: form.rounding,
     target: form.target,
     ...(tarot.value ? { tarotEndMode: form.tarotEndMode } : {}),
+    ...(!tarot.value ? { callsEnabled: form.callsEnabled } : {}),
     firstDealer: form.firstDealer,
   })
 }
@@ -304,6 +308,10 @@ async function closeRoom(): Promise<void> {
           >
           <label><input v-model="form.rounding" type="radio" value="exact" /> Points réels</label>
         </fieldset>
+        <label v-if="!tarot" class="flex items-center gap-2">
+          <input v-model="form.callsEnabled" type="checkbox" />
+          <span>Appels de couleur · double-tap</span>
+        </label>
         <div>
           <label v-if="tarot" class="label">
             Fin de partie
@@ -346,6 +354,8 @@ async function closeRoom(): Promise<void> {
         <dd v-if="!tarot">{{ view.config.teamNames.join(' / ') }}</dd>
         <dt class="muted">Calcul</dt>
         <dd>{{ tarot || view.config.rounding === 'rounded' ? 'Arrondi' : 'Points réels' }}</dd>
+        <dt v-if="!tarot" class="muted">Appels</dt>
+        <dd v-if="!tarot">{{ view.config.callsEnabled === false ? 'Désactivés' : 'Double-tap' }}</dd>
         <dt class="muted">Objectif</dt>
         <dd>{{ view.config.target }}</dd>
         <dt class="muted">Premier donneur</dt>
