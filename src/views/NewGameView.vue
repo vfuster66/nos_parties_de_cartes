@@ -168,15 +168,12 @@ async function start() {
             :label="`Équipe ${ti ? 'B' : 'A'} — joueur 2`"
             :exclude="chosen.filter((p) => p !== t[1])"
           />
-          <p v-if="existingTeams[ti]" class="ok">
-            Équipe déjà connue : {{ data.teamName(existingTeams[ti]!.id) }}. Son historique sera conservé.
-          </p>
+          <p v-if="existingTeams[ti]" class="ok">{{ data.teamName(existingTeams[ti]!.id) }} · historique conservé</p>
           <div>
             <label class="label" :for="`tn-${ti}`">Nom de l’équipe (facultatif)</label>
             <input :id="`tn-${ti}`" v-model="teamNames[ti]" class="input" placeholder="Ex. Les As" />
           </div>
         </fieldset>
-        <p class="muted">Ordre autour de la table : A1, B1, A2, B2 (les équipes alternent).</p>
       </template>
       <template v-else>
         <SegmentedChoice
@@ -184,9 +181,7 @@ async function start() {
           label="Nombre de joueurs inscrits"
           :options="[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))"
         />
-        <p v-if="tarotCount === 6" class="note">
-          À six, cinq jouent et le donneur est au repos (il marque 0 et tourne à chaque donne).
-        </p>
+        <p v-if="tarotCount === 6" class="note">6 joueurs : donneur au repos, rotation à chaque donne.</p>
         <PlayerSelect
           v-for="i in tarotCount"
           :key="i"
@@ -210,9 +205,7 @@ async function start() {
             Ajouter
           </button>
         </div>
-        <p v-if="duplicates.length" class="note mt-2">
-          Un joueur nommé « {{ duplicates[0].name }} » existe déjà. Vous pouvez quand même ajouter un homonyme.
-        </p>
+        <p v-if="duplicates.length" class="note mt-2">Homonyme possible : « {{ duplicates[0].name }} ».</p>
       </div>
     </section>
 
@@ -220,9 +213,6 @@ async function start() {
 
     <details class="card">
       <summary class="cursor-pointer text-lg font-bold">Règles de cette partie</summary>
-      <p class="muted my-2">
-        Copiées depuis vos préférences ; elles ne changeront plus si vous modifiez les préférences plus tard.
-      </p>
       <RulesEditor v-model="rules" />
     </details>
 

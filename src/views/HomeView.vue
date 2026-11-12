@@ -41,9 +41,12 @@ const links = [
     class="mb-4 rounded-3xl bg-[radial-gradient(ellipse_at_top,#2a7a53,#174a32)] p-4 text-white shadow-md"
   >
     <h2 id="count-title" class="text-2xl font-bold">✏️ Compter une partie</h2>
-    <p class="mb-3 mt-1 text-base text-teal-100">
-      Autour d’une vraie table : coinche, belote, tarot. Fonctionne hors connexion.
-    </p>
+    <div class="mb-3 mt-1 flex flex-wrap gap-1.5" aria-label="Jeux disponibles hors connexion">
+      <span class="badge bg-white/15 text-white">Coinche</span>
+      <span class="badge bg-white/15 text-white">Belote</span>
+      <span class="badge bg-white/15 text-white">Tarot</span>
+      <span class="badge bg-white/15 text-white">Hors connexion</span>
+    </div>
     <div class="flex flex-col gap-2.5">
       <RouterLink
         v-if="resume"
@@ -69,9 +72,11 @@ const links = [
     class="mb-4 rounded-3xl border-2 border-gold bg-gold-soft/50 p-4 shadow-sm"
   >
     <h2 id="online-title" class="text-2xl font-bold">🌐 Jouer en ligne</h2>
-    <p class="mb-3 mt-1 text-base text-slate-700">
-      Chacun sur son téléphone, dans un salon privé : on partage un code. Nécessite une connexion.
-    </p>
+    <div class="mb-3 mt-1 flex flex-wrap gap-1.5" aria-label="Jeu en ligne">
+      <span class="badge">Salon privé</span>
+      <span class="badge">3–6 joueurs</span>
+      <span class="badge">Connexion requise</span>
+    </div>
     <div class="flex flex-col gap-2.5">
       <RouterLink
         v-if="lastRoom"
@@ -104,7 +109,5 @@ const links = [
     <h2 id="rec" class="mb-2 text-xl font-bold">Parties récentes</h2>
     <div class="flex flex-col gap-2"><GameCard v-for="g in recent" :key="g.id" :game="g" /></div>
   </section>
-  <p v-else-if="!resume" class="card">
-    Aucune partie pour l’instant. Commencez par « Nouvelle partie » : vous pourrez créer vos joueurs à ce moment-là.
-  </p>
+  <p v-else-if="!resume" class="card muted">Aucune partie.</p>
 </template>

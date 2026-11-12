@@ -36,7 +36,7 @@ async function share(): Promise<void> {
 
 <template>
   <section class="card flex flex-col gap-2 !border-gold !border-2 !bg-gold-soft/40" aria-label="Inviter des joueurs">
-    <p class="eyebrow">Invitez les autres joueurs</p>
+    <p class="eyebrow">Inviter</p>
     <p
       class="break-all text-center text-4xl font-bold tracking-[0.2em]"
       data-testid="room-code"
@@ -52,6 +52,6 @@ async function share(): Promise<void> {
       <button class="btn" @click="copy('code', formatCode(code))">Copier le code</button>
     </div>
     <p v-if="copied" class="ok" role="status">{{ copied === 'lien' ? '✓ Lien copié.' : '✓ Code copié.' }}</p>
-    <p class="muted text-center text-sm">Le lien ouvre le salon mais ne réserve aucune place.</p>
+    <p class="muted text-center text-sm">Le lien n’attribue pas de place.</p>
   </section>
 </template>

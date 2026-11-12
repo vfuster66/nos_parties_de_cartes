@@ -40,7 +40,7 @@ const num = (e: Event) => Number((e.target as HTMLInputElement).value)
         ]"
         @update:model-value="(v) => ((rules as any).announcements = v === 'oui')"
       />
-      <p class="muted">Égalité à la fin (choix par défaut) : on poursuit avec une donne supplémentaire.</p>
+      <p class="muted">Égalité : une donne supplémentaire.</p>
     </template>
     <template v-else>
       <SegmentedChoice

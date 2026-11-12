@@ -361,6 +361,42 @@ async function tarotShots(browser: Browser, key: string, withDeal = false): Prom
     (x) => !!x.tarot && t(x).phase === 'playing' && t(x).actions.playable.length > 0 && t(x).trick.length >= 1,
     40000,
   )
+  if (key === 'tarot-3') {
+    const cards = me.page.getByTestId('hand-card')
+    if ((await cards.count()) !== 24) throw new Error(`Main tarot à 3 : ${await cards.count()} cartes au lieu de 24`)
+    const boxes = await cards.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect()
+        return { x: r.x, y: r.y, width: r.width, height: r.height }
+      }),
+    )
+    if (boxes.some((b) => b.width < 40)) throw new Error(`Cible de carte trop étroite à ${WIDTH}px`)
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!
+        const b = boxes[j]!
+        if (Math.abs(a.y - b.y) < 1 && a.x + a.width > b.x + 0.5)
+          throw new Error(`Cibles de cartes superposées (${i}, ${j}) à ${WIDTH}px`)
+      }
+    }
+    if (!(await me.page.getByTestId('current-trick').isVisible()))
+      throw new Error('Accès au pli en cours absent à portée de main')
+    await me.page.getByTestId('current-trick').click()
+    if (!(await me.page.getByRole('dialog', { name: 'Pli en cours' }).isVisible()))
+      throw new Error('Le pli en cours ne peut pas être agrandi')
+    await me.page.getByTestId('sheet-close').click()
+    if (!(await me.page.getByTestId('play-card').isVisible())) throw new Error('Action Jouer absente avant sélection')
+    const playable = me.page.locator('[data-testid="hand-card"][data-state="playable"]').first()
+    await playable.click()
+    if ((await me.page.locator('[data-testid="hand-card"][data-state="selected"]').count()) !== 1)
+      throw new Error('La sélection ne marque pas exactement une carte')
+    if (!(await me.page.getByTestId('play-card').isVisible())) throw new Error('Action Jouer absente après sélection')
+    await me.page.getByTestId('preview-card').click()
+    if (!(await me.page.getByTestId('card-preview').isVisible())) throw new Error('Agrandissement de carte absent')
+    if ((await cards.count()) !== 24 || !(await me.page.getByTestId('play-card').isVisible()))
+      throw new Error('L’aperçu a joué la carte ou masqué l’action')
+    await me.page.getByTestId('sheet-close').click()
+  }
   await shot(me.page, `54-${key}-jeu`, true)
   if (withDeal) {
     await drive(me, bots, (x) => !!x.tarot && t(x).phase === 'summary', 120000)
@@ -387,7 +423,9 @@ async function longNames(browser: Browser): Promise<void> {
   await closeAll(me, bots)
 }
 
-const browser = await (engine === 'webkit' ? webkit : chromium).launch()
+const browser = await (engine === 'webkit' ? webkit : chromium).launch({
+  ...(engine === 'chromium' && process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+})
 const steps: [string, () => Promise<void>][] = [
   ['compteur', () => counter(browser)],
   ['salon', () => lobbyShots(browser)],

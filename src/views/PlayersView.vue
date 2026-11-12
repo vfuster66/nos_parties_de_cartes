@@ -31,9 +31,7 @@ async function add() {
   <form class="card mb-4 flex flex-col gap-3" @submit.prevent="add">
     <label class="label" for="pn">Nouveau joueur</label>
     <input id="pn" v-model="name" class="input" placeholder="Nom ou pseudo" autocomplete="off" />
-    <p v-if="dup.length" class="note">
-      Un joueur nommé « {{ dup[0].name }} » existe déjà. Vous pouvez quand même créer un homonyme.
-    </p>
+    <p v-if="dup.length" class="note">Homonyme possible : « {{ dup[0].name }} ».</p>
     <p v-if="error" class="err" role="alert">{{ error }}</p>
     <button class="btn btn-primary">Ajouter</button>
   </form>

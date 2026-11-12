@@ -39,11 +39,9 @@ async function rename() {
       <label class="label" for="tn">Nom de l’équipe (vide = noms des joueurs)</label>
       <input id="tn" v-model="name" class="input" />
       <p v-if="error" class="err" role="alert">{{ error }}</p>
-      <p v-if="saved" class="ok" role="status">Nom enregistré. L’historique est conservé.</p>
+      <p v-if="saved" class="ok" role="status">Nom enregistré.</p>
       <button class="btn btn-primary">Renommer</button>
-      <p class="muted">
-        Changer un membre crée une autre équipe : choisissez simplement d’autres joueurs lors d’une nouvelle partie.
-      </p>
+      <p class="muted">Changer les membres crée une nouvelle équipe.</p>
     </form>
     <section class="card">
       <h2 class="mb-2 text-xl font-bold">Statistiques</h2>

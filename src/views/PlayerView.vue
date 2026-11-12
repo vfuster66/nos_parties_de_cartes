@@ -56,9 +56,9 @@ async function remove() {
     <form class="card mb-4 flex flex-col gap-3" @submit.prevent="rename">
       <label class="label" for="rn">Nom ou pseudo</label>
       <input id="rn" v-model="name" class="input" />
-      <p v-if="dup.length" class="note">Un autre joueur porte déjà ce nom (les homonymes restent autorisés).</p>
+      <p v-if="dup.length" class="note">Homonyme possible.</p>
       <p v-if="error" class="err" role="alert">{{ error }}</p>
-      <p v-if="saved" class="ok" role="status">Nom enregistré. L’historique est conservé.</p>
+      <p v-if="saved" class="ok" role="status">Nom enregistré.</p>
       <button class="btn btn-primary">Renommer</button>
     </form>
     <section class="card mb-4">

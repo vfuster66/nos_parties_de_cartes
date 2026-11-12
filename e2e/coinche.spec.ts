@@ -85,7 +85,7 @@ test('parcours complet : salon, places, enchères, donne, nouvelle donne, reconn
     await players[3].page.getByTestId('next-round').click()
     for (const p of players) await expect(p.page.getByTestId('bidding')).toBeVisible()
     // Le donneur a tourné : la place 1 est donneuse, Bob (place 2) parle en premier.
-    await expect(players[1].page.getByText('C’est à vous de parler.')).toBeVisible()
+    await expect(players[1].page.getByText('À vous', { exact: true })).toBeVisible()
 
     // Déconnexion de Dan : pause pour les autres ; retour avec la même main.
     const danHand = await players[3].page

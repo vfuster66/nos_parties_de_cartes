@@ -26,13 +26,16 @@ const me = computed(() => props.view.you.seat)
 const n = computed(() => props.view.seats.length)
 const player = (seat: Seat | number) => nameOfSeat(props.view, seat as Seat)
 const selected = ref<TarotCard[]>([])
+const previewCard = ref<TarotCard | null>(null)
 const announcements = ref<Exclude<TarotBonusType, 'petitAuBout'>[]>([])
 const scoresOpen = ref(false)
 const lastOpen = ref(false)
+const trickOpen = ref(false)
 watch(
   () => [tarot.value.phase, tarot.value.turn],
   () => {
     selected.value = []
+    previewCard.value = null
     announcements.value = []
   },
 )
@@ -277,7 +280,7 @@ async function abandon() {
         aria-label="Appel du roi"
       >
         <template v-if="tarot.actions.calls.length">
-          <p class="font-semibold">Quel roi appelez-vous ? Son détenteur sera votre partenaire.</p>
+          <p class="font-semibold">Appeler le roi</p>
           <div class="grid grid-cols-4 gap-2">
             <button
               v-for="card in tarot.actions.calls"
@@ -303,7 +306,7 @@ async function abandon() {
           <li v-for="card in tarot.dog" :key="card" class="w-11"><PlayingCard :face="faceOfTarot(card)" /></li>
         </ul>
         <template v-if="tarot.actions.discard.length">
-          <p class="text-sm">Touchez {{ tarot.dogSize }} cartes de votre main à écarter.</p>
+          <p class="text-sm">Écarter {{ tarot.dogSize }} cartes</p>
           <button
             class="btn btn-primary !min-h-14"
             :disabled="selected.length !== tarot.dogSize || busy"
@@ -319,7 +322,7 @@ async function abandon() {
         class="card flex flex-col gap-2 !border-2 !border-teal-700"
         aria-label="Annonces"
       >
-        <p class="font-semibold">Annonces avant le premier pli</p>
+        <p class="font-semibold">Annonces</p>
         <label
           v-for="type in tarot.actions.declarations"
           :key="type"
@@ -328,9 +331,7 @@ async function abandon() {
           <input v-model="announcements" type="checkbox" :value="type" class="h-6 w-6" />
           {{ TAROT_BONUS_LABELS[type] }}
         </label>
-        <p v-if="handfulSize" class="note">
-          Touchez {{ handfulSize }} atouts de votre main pour montrer votre poignée.
-        </p>
+        <p v-if="handfulSize" class="note">Choisir {{ handfulSize }} atouts</p>
         <button
           class="btn btn-primary !min-h-14"
           :disabled="busy || (handfulSize > 0 && selected.length !== handfulSize)"
@@ -419,21 +420,60 @@ async function abandon() {
       class="rounded-2xl bg-stone-200/70 pb-1"
     >
       <p class="px-3 pt-2 text-sm font-semibold text-slate-700">Votre main · {{ tarot.hand.length }} cartes</p>
+      <p class="px-3 text-xs font-medium text-slate-700" aria-label="Repères de la main">
+        ▶ Jouable · ✓ sélectionnée · × indisponible
+      </p>
       <HandFan :items="handItems" label="Cartes de votre main" @tap="tap" />
     </section>
     <div
-      v-if="myTurn && tarot.phase === 'playing' && selected.length"
-      class="sticky bottom-2 z-20 rounded-2xl border border-teal-900 bg-white p-2 shadow-xl"
+      v-if="selected.length || (myTurn && tarot.phase === 'playing')"
+      class="sticky bottom-2 z-20 flex items-center gap-2 rounded-2xl border border-teal-900 bg-white p-2 shadow-xl"
     >
       <button
-        class="btn btn-primary w-full !min-h-14 text-lg"
-        :disabled="busy"
+        v-if="myTurn && tarot.phase === 'playing'"
+        class="btn !min-h-14 !px-3 text-sm"
+        type="button"
+        data-testid="current-trick"
+        @click="trickOpen = true"
+      >
+        Pli en cours
+      </button>
+      <button
+        v-if="selected.length"
+        class="btn min-w-24 !min-h-14"
+        type="button"
+        data-testid="preview-card"
+        @click="previewCard = selected[0]"
+      >
+        Agrandir
+      </button>
+      <button
+        v-if="myTurn && tarot.phase === 'playing'"
+        class="btn btn-primary min-w-0 flex-1 !min-h-14 !px-2 text-sm"
+        :disabled="busy || !selected.length"
         data-testid="play-card"
         @click="playSelected"
       >
-        {{ busy ? 'Envoi en cours…' : `Jouer ${label(selected[0])}` }}
+        {{ busy ? 'Envoi en cours…' : selected.length ? `Jouer ${label(selected[0])}` : 'Choisir une carte' }}
       </button>
     </div>
+
+    <BottomSheet v-if="trickOpen" title="Pli en cours" @close="trickOpen = false">
+      <p v-if="tarot.trick.length === 0" class="text-center text-slate-700">Pli vide.</p>
+      <ul v-else class="grid grid-cols-2 gap-3" aria-label="Cartes du pli en cours">
+        <li v-for="play in tarot.trick" :key="play.seat" class="flex flex-col items-center gap-1">
+          <span class="font-semibold">{{ player(play.seat) }}</span>
+          <span class="w-24"><PlayingCard :face="faceOfTarot(play.card)" /></span>
+        </li>
+      </ul>
+    </BottomSheet>
+    <BottomSheet v-if="previewCard" :title="`Aperçu : ${label(previewCard)}`" @close="previewCard = null">
+      <div class="mx-auto w-48 max-w-[70vw]" data-testid="card-preview">
+        <PlayingCard :face="faceOfTarot(previewCard)" />
+      </div>
+      <p class="mt-3 text-center text-lg font-bold">{{ label(previewCard) }}</p>
+      <p class="text-center text-sm text-slate-700">Cette carte n’est pas jouée.</p>
+    </BottomSheet>
 
     <p v-if="!active" class="card text-center text-xl font-bold">
       {{ view.status === 'abandoned' ? 'Partie abandonnée' : '🏆 Résultat final' }}

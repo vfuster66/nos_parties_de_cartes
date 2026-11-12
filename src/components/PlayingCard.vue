@@ -24,6 +24,12 @@ const rank = computed(() => {
   if (!f) return ''
   return f.kind === 'suit' ? f.rank : f.kind === 'trump' ? String(f.n) : '★'
 })
+const cornerSymbol = computed(() => (props.face?.kind === 'trump' ? '★' : props.face?.kind === 'excuse' ? 'EX' : ''))
+const stateMark = computed(() =>
+  props.state === 'playable' ? '▶' : props.state === 'selected' ? '✓' : props.state === 'pending' ? '…' : '',
+)
+const courtCard = computed(() => props.face?.kind === 'suit' && ['V', 'C', 'D', 'R'].includes(props.face.rank))
+const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(props.face.suit) : false))
 </script>
 
 <template>
@@ -54,11 +60,40 @@ const rank = computed(() => {
     </template>
     <template v-else>
       <span class="absolute left-[9%] top-[5%] flex flex-col items-center leading-[0.95]" aria-hidden="true">
-        <span class="text-[30cqw]">{{ rank }}</span>
-        <span v-if="face.kind === 'suit'" class="text-[26cqw]">{{ faceSymbol(face) }}</span>
+        <span
+          class="min-w-[1.35em] rounded-[0.18em] bg-white/95 px-[0.12em] py-[0.08em] text-center text-[30cqw] shadow-sm"
+          >{{ rank }}</span
+        >
+        <span
+          v-if="face.kind === 'suit'"
+          class="mt-[0.04em] min-w-[1.35em] rounded-[0.18em] bg-white/95 px-[0.12em] text-center text-[26cqw] shadow-sm"
+          >{{ faceSymbol(face) }}</span
+        >
+        <span
+          v-else-if="cornerSymbol"
+          class="mt-[0.04em] rounded-[0.18em] bg-white/95 px-[0.18em] py-[0.08em] text-center text-[20cqw] shadow-sm"
+          >{{ cornerSymbol }}</span
+        >
       </span>
       <span
-        v-if="face.kind === 'suit'"
+        v-if="stateMark"
+      …558 tokens truncated… d="M35 41q1-15 15-15t15 15l-4 19q-11 9-22 0z" fill="#ffe0b2" stroke="#153c50" stroke-width="2" />
+            <path d="M34 42q0-20 17-20 13 0 16 15l-8-3-8-7q-4 8-17 10z" fill="#153c50" />
+            <path
+              d="M29 73q21 10 42 0m-21-8v19m-10-3 10 7 10-7"
+              fill="none"
+              stroke="#efa900"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="4"
+            />
+          </g>
+          <circle cx="50" cy="65" r="4" fill="#efa900" />
+        </g>
+        <rect x="5" y="3" width="90" height="124" rx="12" fill="none" stroke="#153c50" stroke-width="2" />
+      </svg>
+      <span
+        v-else-if="face.kind === 'suit'"
         class="absolute inset-0 flex items-center justify-center pt-[14%] pl-[14%] text-[64cqw] opacity-95"
         aria-hidden="true"
         >{{ faceSymbol(face) }}</span
@@ -69,9 +104,17 @@ const rank = computed(() => {
         aria-hidden="true"
         >{{ face.n }}</span
       >
-      <span v-else class="absolute inset-0 flex items-center justify-center pt-[14%] text-[60cqw]" aria-hidden="true"
-        >★</span
+      <span
+        v-else
+        class="absolute inset-0 flex flex-col items-center justify-center pt-[14%] text-amber-900"
+        aria-hidden="true"
       >
+        <span class="text-[56cqw] leading-none">★</span>
+        <span
+          class="mt-[4%] rounded-full border border-amber-700 bg-amber-100 px-[12%] py-[4%] text-[19cqw] font-black tracking-[0.12em]"
+          >EXCUSE</span
+        >
+      </span>
       <span class="absolute bottom-[5%] right-[9%] rotate-180 text-[30cqw] leading-none" aria-hidden="true">{{
         face.kind === 'suit' ? rank : ''
       }}</span>

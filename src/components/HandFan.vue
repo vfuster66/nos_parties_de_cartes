@@ -18,17 +18,19 @@ const props = defineProps<{ items: HandItem[]; label: string; compact?: boolean 
 const emit = defineEmits<{ tap: [key: string] }>()
 const cols = computed(() => {
   const n = props.items.length
-  return props.compact ? Math.max(n, 1) : n <= 8 ? 4 : n <= 12 ? 6 : 8
+  // Une main de 24 cartes passe sur quatre rangées de six : cartes plus larges,
+  // cibles tactiles séparées et indices lisibles sur les petits écrans.
+  return props.compact ? Math.max(n, 1) : n <= 8 ? 4 : n <= 24 ? 6 : 8
 })
 const maxCard = computed(() =>
-  props.compact ? '3.4rem' : cols.value === 4 ? '4.75rem' : cols.value === 6 ? '4rem' : '3.2rem',
+  props.compact ? '3.4rem' : cols.value === 4 ? '4.75rem' : props.items.length > 12 ? '2.85rem' : '4rem',
 )
 </script>
 
 <template>
   <ul
     class="mx-auto grid justify-center gap-y-2 pb-1 pt-2"
-    :class="compact ? 'gap-x-1 px-0' : 'gap-x-1.5 px-1'"
+    :class="compact ? 'gap-x-1 px-0' : items.length > 12 ? 'gap-x-1 px-1' : 'gap-x-1.5 px-1'"
     :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, ${maxCard}))` }"
     :aria-label="label"
   >

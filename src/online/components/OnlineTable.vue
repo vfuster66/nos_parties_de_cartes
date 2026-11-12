@@ -75,6 +75,7 @@ const tableSeats = computed<TableSeat[]>(() =>
 
 // ----- Sélection et envoi d'une carte -----
 const selected = ref<Card | null>(null)
+const previewCard = ref<Card | null>(null)
 const hint = ref('')
 const isPlayable = (c: Card): boolean => v.value.actions.playable.some((x) => sameCard(x, c))
 function cardState(c: Card) {
@@ -104,6 +105,7 @@ watch(
   () => {
     if (!myTurnToPlay.value || (selected.value && !v.value.hand.some((c) => sameCard(c, selected.value!))))
       selected.value = null
+    previewCard.value = null
   },
 )
 
@@ -366,6 +368,9 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       <p class="px-3 pt-2 text-sm font-semibold text-slate-700">
         Votre main · {{ v.hand.length }} carte{{ v.hand.length > 1 ? 's' : '' }}
       </p>
+      <p class="px-3 text-xs font-medium text-slate-700" aria-label="Repères de la main">
+        ▶ Jouable · ✓ sélectionnée · × indisponible
+      </p>
       <HandFan :items="handItems" label="Cartes de votre main" @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>
     </section>
@@ -373,19 +378,28 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       v-if="selected && myTurnToPlay"
       class="sticky bottom-2 z-20 rounded-2xl border border-teal-900 bg-white p-2 shadow-xl"
     >
-      <button class="btn btn-primary w-full !min-h-14 text-lg" :disabled="busy" data-testid="play-card" @click="play">
-        {{ busy ? 'Envoi en cours…' : `Jouer ${cardName(selected)}` }}
-      </button>
+      <div class="flex gap-2">
+        <button
+          class="btn !min-w-24 !min-h-14"
+          type="button"
+          data-testid="preview-card"
+          @click="previewCard = selected"
+        >
+          Agrandir
+        </button>
+        <button class="btn btn-primary flex-1 !min-h-14 text-lg" :disabled="busy" data-testid="play-card" @click="play">
+          {{ busy ? 'Envoi en cours…' : `Jouer ${cardName(selected)}` }}
+        </button>
+      </div>
     </div>
-    <p
-      v-else-if="myTurnToPlay && round.phase === 'playing'"
-      class="text-center text-sm font-semibold text-teal-900"
-      role="status"
-    >
-      Touchez une carte autorisée (les cartes grisées sont refusées par les règles).
-    </p>
-
     <!-- Scores et historique -->
+    <BottomSheet v-if="previewCard" :title="`Aperçu : ${cardName(previewCard)}`" @close="previewCard = null">
+      <div class="mx-auto w-48 max-w-[70vw]" data-testid="card-preview">
+        <PlayingCard :face="faceOfCard(previewCard)" />
+      </div>
+      <p class="mt-3 text-center text-lg font-bold">{{ cardName(previewCard) }}</p>
+      <p class="text-center text-sm text-slate-700">Cette carte n’est pas jouée.</p>
+    </BottomSheet>
     <BottomSheet v-if="scoresOpen" title="Scores et historique" @close="scoresOpen = false">
       <div class="grid grid-cols-2 gap-2 text-center">
         <div v-for="t in [0, 1] as const" :key="t" class="rounded-xl bg-white p-2 shadow-sm">

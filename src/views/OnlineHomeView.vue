@@ -47,9 +47,10 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
     Le jeu en ligne n’est pas disponible : aucun serveur n’est configuré.
   </p>
   <template v-else>
-    <p class="muted mb-3">
-      Coinche, belote ou tarot de trois à six joueurs, chacun sur son téléphone. Aucun compte : un pseudo suffit.
-    </p>
+    <div class="mb-3 flex flex-wrap gap-1.5" aria-label="Jeu en ligne">
+      <span class="badge">3–6 joueurs</span>
+      <span class="badge">Sans compte</span>
+    </div>
     <div v-if="online.error" class="err mb-3" role="alert">{{ online.error }}</div>
 
     <section v-if="existing" class="card mb-3">
@@ -62,7 +63,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
     <section class="card mb-3 !p-3">
       <label class="label" for="nick">Votre pseudo</label>
       <input id="nick" v-model="nickname" class="input" maxlength="20" autocomplete="nickname" data-testid="nickname" />
-      <p class="muted mt-1 text-sm">Affiché aux autres joueurs, 20 caractères maximum. Aucun compte.</p>
+      <p class="muted mt-1 text-sm">20 caractères maximum.</p>
     </section>
 
     <form v-if="!code" class="card mb-3 flex flex-col gap-3 !border-2 !border-teal-700" @submit.prevent>
@@ -88,7 +89,6 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
       >
         {{ busy ? 'Création…' : 'Créer un salon privé' }}
       </button>
-      <p class="muted text-sm">Vous recevrez un code à envoyer aux autres joueurs.</p>
     </form>
 
     <form class="card mb-3 flex flex-col gap-3" :class="code ? '!border-2 !border-teal-700' : ''" @submit.prevent>
@@ -117,7 +117,6 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
       >
         Rejoindre{{ code ? ' le salon' : ' avec ce code' }}
       </button>
-      <p v-if="!nickOk" class="muted text-sm">Saisissez d’abord votre pseudo ci-dessus.</p>
     </form>
 
     <section v-if="sessions.length" class="card mb-3" aria-labelledby="mine">
@@ -152,9 +151,7 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
           <p class="muted text-sm">{{ r.players.map((p) => p.nickname).join(', ') }}</p>
         </li>
       </ul>
-      <p class="muted mt-2 text-sm">
-        Résultats conservés sur cet appareil. Ils ne sont pas rattachés à vos joueurs locaux ni à vos statistiques.
-      </p>
+      <p class="muted mt-2 text-sm">Résultats en ligne, séparés des parties locales.</p>
     </section>
   </template>
 </template>

@@ -190,14 +190,12 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
     </section>
 
     <p v-if="state.reserve.length" class="note mb-3">
-      ⚖ Réserve de litige : {{ sum(state.reserve.map((r) => r.total)) }} points, attribués au gagnant de la prochaine
-      donne sans litige.
+      ⚖ Réserve : {{ sum(state.reserve.map((r) => r.total)) }} pts · au gagnant de la prochaine donne sans litige.
     </p>
     <p v-if="state.endReached && editable" class="ok mb-3">
-      <template v-if="game.kind === 'tarot'">Seuil atteint.</template><template v-else>Objectif atteint.</template> Vous
-      pouvez terminer la partie.
+      ✓ <template v-if="game.kind === 'tarot'">Seuil atteint.</template><template v-else>Objectif atteint.</template>
     </p>
-    <p v-if="hasDraft && editable" class="note mb-3">Un brouillon de donne est en cours de saisie.</p>
+    <p v-if="hasDraft && editable" class="note mb-3">Brouillon de donne en cours.</p>
     <p v-if="editable" class="mb-3 text-base">
       Donneur suivant : <strong>{{ data.playerName(state.nextDealerId) }}</strong
       ><span v-if="state.nextRestingId"> (au repos)</span>

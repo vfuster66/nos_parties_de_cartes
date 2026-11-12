@@ -84,7 +84,7 @@ async function doMerge() {
   )
   try {
     await data.importMerge(incoming.value, replace)
-    importMsg.value = 'Import terminé et enregistré. Scores et statistiques sont recalculés à partir des donnes.'
+    importMsg.value = 'Import terminé · scores recalculés.'
     incoming.value = null
     plan.value = null
   } catch (err) {
@@ -103,7 +103,7 @@ async function doReplace() {
     return
   try {
     await data.importReplaceAll(incoming.value)
-    importMsg.value = 'Restauration terminée et enregistrée.'
+    importMsg.value = 'Restauration terminée.'
     incoming.value = null
     plan.value = null
   } catch (err) {
@@ -157,18 +157,17 @@ onBeforeUnmount(() => window.removeEventListener('beforeinstallprompt', onPrompt
     <p v-if="prefErr" class="err" role="alert">{{ prefErr }}</p>
     <p v-if="prefMsg" class="ok" role="status">{{ prefMsg }}</p>
     <button class="btn btn-primary" @click="savePrefs">Enregistrer ces préférences</button>
-    <p class="muted">
-      Chaque partie conserve une copie de ses règles : changer les préférences ne modifie pas les parties existantes.
-    </p>
+    <p class="muted">Chaque partie garde ses règles.</p>
   </section>
 
   <section class="card mb-4 flex flex-col gap-3" aria-labelledby="s-save">
     <h2 id="s-save" class="text-xl font-bold">Sauvegarde et restauration</h2>
-    <ul class="list-disc pl-5 text-base">
-      <li>Vos données restent dans ce navigateur, sur cet appareil : aucun compte, aucun serveur.</li>
-      <li>Effacer les données du navigateur peut effacer tout l’historique.</li>
-      <li>L’export JSON permet de sauvegarder ou de transférer vos données vers un autre appareil.</li>
-    </ul>
+    <div class="grid grid-cols-2 gap-2 text-sm" aria-label="Stockage des données">
+      <span class="badge">📱 Sur cet appareil</span>
+      <span class="badge">👤 Sans compte</span>
+      <p class="note col-span-2 !p-2">⚠️ Effacer les données du navigateur efface l’historique.</p>
+      <p class="muted col-span-2">↔ Export JSON pour sauvegarder ou transférer.</p>
+    </div>
     <button class="btn btn-primary" @click="exportFile">⬇ Exporter toutes les données (JSON)</button>
 
     <label class="label" for="imp">Importer une sauvegarde</label>
@@ -205,14 +204,9 @@ onBeforeUnmount(() => window.removeEventListener('beforeinstallprompt', onPrompt
 
   <section class="card mb-4 flex flex-col gap-2" aria-labelledby="s-inst">
     <h2 id="s-inst" class="text-xl font-bold">Installation et hors connexion</h2>
-    <p class="text-base">
-      Après un premier chargement réussi, l’application fonctionne sans connexion. Vous pouvez l’installer sur l’écran
-      d’accueil quand votre navigateur le permet.
-    </p>
+    <p class="text-base">Hors connexion après le premier chargement.</p>
     <button v-if="installEvt" class="btn btn-primary" @click="installEvt.prompt()">Installer l’application</button>
-    <p v-else class="muted">
-      Installation non proposée par ce navigateur pour le moment (sur iPhone : Partager → Sur l’écran d’accueil).
-    </p>
+    <p v-else class="muted">Sur iPhone : Partager → Sur l’écran d’accueil.</p>
   </section>
 
   <button class="btn btn-danger w-full" @click="wipe">Effacer toutes les données</button>
