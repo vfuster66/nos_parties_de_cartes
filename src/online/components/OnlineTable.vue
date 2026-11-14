@@ -331,14 +331,14 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
         v-if="round.beloteDeal"
         class="col-span-4 flex items-center justify-center gap-3 rounded-xl bg-teal-800 p-1.5 text-white"
       >
-        <span class="w-9"><PlayingCard :face="faceOfCard(round.beloteDeal.turned)" simple-figures /></span>
+        <span class="w-9"><PlayingCard :face="faceOfCard(round.beloteDeal.turned)" /></span>
         <span class="text-sm font-semibold">Carte retournée<br />{{ cardName(round.beloteDeal.turned) }}</span>
       </div>
     </section>
 
     <!-- Table -->
     <div v-else class="relative">
-      <TableSeats :seats="tableSeats" :plays="plays" :fading="centerIsShown" simple-figures />
+      <TableSeats :seats="tableSeats" :plays="plays" :fading="centerIsShown" />
       <p
         v-if="announce"
         class="anim-drop absolute inset-x-12 top-2 z-30 rounded-xl bg-gold p-1.5 text-center text-base font-bold text-slate-900 shadow-lg"
@@ -383,7 +383,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       <p class="px-3 pt-2 text-sm font-semibold text-slate-700">
         Votre main · {{ v.hand.length }} carte{{ v.hand.length > 1 ? 's' : '' }}
       </p>
-      <HandFan :items="handItems" label="Cartes de votre main" compact simple-figures @tap="tapKey" />
+      <HandFan :items="handItems" label="Cartes de votre main" compact @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>
     </section>
     <!-- Phase -->
@@ -414,7 +414,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
             <span class="sr-only"> : {{ entry.cards.map(cardName).join(', ') }}</span>
             <span class="mt-0.5 flex gap-1" aria-hidden="true">
               <span v-for="c in entry.cards" :key="c.suit + c.rank" class="w-9"
-                ><PlayingCard :face="faceOfCard(c)" simple-figures
+                ><PlayingCard :face="faceOfCard(c)"
               /></span>
             </span>
           </li>
@@ -437,7 +437,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
       <p v-if="canCallSuit" class="px-3 text-xs font-semibold text-teal-800" aria-label="Appel de couleur">
         ⚡ Double-tap : appeler la couleur
       </p>
-      <HandFan :items="handItems" label="Cartes de votre main" simple-figures @tap="tapKey" />
+      <HandFan :items="handItems" label="Cartes de votre main" @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>
     </section>
     <div
@@ -461,7 +461,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
     <!-- Scores et historique -->
     <BottomSheet v-if="previewCard" :title="`Aperçu : ${cardName(previewCard)}`" @close="previewCard = null">
       <div class="mx-auto w-48 max-w-[70vw]" data-testid="card-preview">
-        <PlayingCard :face="faceOfCard(previewCard)" simple-figures />
+        <PlayingCard :face="faceOfCard(previewCard)" />
       </div>
       <p class="mt-3 text-center text-lg font-bold">{{ cardName(previewCard) }}</p>
       <p class="text-center text-sm text-slate-700">Cette carte n’est pas jouée.</p>
@@ -510,7 +510,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
           :key="t.seat"
           class="flex flex-col items-center gap-1 text-center text-sm"
         >
-          <PlayingCard :face="faceOfCard(t.card)" :highlight="t.seat === round.lastTrick.winner" simple-figures />
+          <PlayingCard :face="faceOfCard(t.card)" :highlight="t.seat === round.lastTrick.winner" />
           <span class="w-full truncate">{{ nameOfSeat(v, t.seat) }}</span>
         </li>
       </ul>
