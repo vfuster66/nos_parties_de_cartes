@@ -14,7 +14,7 @@ export interface HandItem {
   disabled?: boolean
   pressed?: boolean
 }
-const props = defineProps<{ items: HandItem[]; label: string; compact?: boolean; simpleFigures?: boolean }>()
+const props = defineProps<{ items: HandItem[]; label: string; compact?: boolean }>()
 const emit = defineEmits<{ tap: [key: string] }>()
 const cols = computed(() => {
   const n = props.items.length
@@ -53,7 +53,7 @@ const maxCard = computed(() =>
         :data-state="it.state"
         @click="emit('tap', it.key)"
       >
-        <PlayingCard :face="it.face" :state="it.state" :simple-figures="simpleFigures" />
+        <PlayingCard :face="it.face" :state="it.state" />
       </button>
     </li>
   </ul>
