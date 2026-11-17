@@ -141,8 +141,8 @@ export const useData = defineStore('data', {
     },
     /** Joueurs ayant un nom proche (insensible à la casse et aux accents), pour avertir sans bloquer. */
     similarPlayers(name: string, exceptId?: string): Player[] {
-      const k = normalize(name)
-      return k ? this.players.filter((p) => p.id !== exceptId && normalize(p.name) === k) : []
+      const k = playerKey(name)
+      return k ? this.players.filter((p) => p.id !== exceptId && playerKey(p.name) === k) : []
     },
 
     // ---------- Équipes ----------
@@ -384,7 +384,9 @@ export const useData = defineStore('data', {
 })
 
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
-const normalize = (s: string): string =>
+
+/** Identité d’un nom : casse, accents et espaces ignorés. */
+export const playerKey = (s: string): string =>
   s
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
