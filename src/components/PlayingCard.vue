@@ -61,7 +61,7 @@ const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(pro
       />
     </template>
     <template v-else>
-      <span class="absolute left-[9%] top-[5%] flex flex-col items-center leading-[0.95]" aria-hidden="true">
+      <span class="absolute left-[9%] top-[5%] z-10 flex flex-col items-center leading-[0.95]" aria-hidden="true">
         <span
           class="min-w-[1.35em] rounded-[0.18em] bg-white/95 px-[0.12em] py-[0.08em] text-center text-[30cqw] shadow-sm"
           >{{ rank }}</span
@@ -85,7 +85,7 @@ const courtSuitRed = computed(() => (props.face?.kind === 'suit' ? isRedSuit(pro
       >
       <svg
         v-if="courtCard && !simpleFigures"
-        class="absolute inset-x-[17%] top-[24%] h-[53%] w-[66%]"
+        class="absolute left-[36%] top-[30%] h-[52%] w-[58%]"
         viewBox="0 0 100 130"
         role="presentation"
         aria-hidden="true"
