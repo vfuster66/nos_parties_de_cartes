@@ -27,6 +27,7 @@ const dealerId = ref('')
 const draftRestored = ref(false)
 const saving = ref(false)
 const saveError = ref('')
+const attempted = ref(false)
 let loaded = false
 
 function init() {
@@ -104,6 +105,7 @@ const errors = computed(() =>
 )
 
 async function save() {
+  attempted.value = true
   if (!candidate.value || errors.value.length || saving.value) return
   saving.value = true
   saveError.value = ''
@@ -167,7 +169,8 @@ async function discard() {
 
       <section class="card" aria-labelledby="prev-h" aria-live="polite">
         <h2 id="prev-h" class="mb-2 text-xl font-bold">Résultat de la donne</h2>
-        <ErrorList :errors="errors" />
+        <ErrorList v-if="attempted" :errors="errors" />
+        <p v-else-if="errors.length" class="muted">Le résultat s’affiche dès que la donne est complète.</p>
         <template v-if="preview && !errors.length">
           <p class="grid grid-cols-2 gap-2 text-center" data-testid="live-result">
             <span v-for="(d, i) in liveDelta" :key="i" class="rounded-xl bg-teal-50 p-2">
@@ -185,7 +188,7 @@ async function discard() {
 
       <p v-if="saveError" class="err" role="alert">{{ saveError }}</p>
       <div class="sticky bottom-[3.75rem] z-10 -mx-3 border-t border-slate-300 bg-slate-50/95 px-3 py-2">
-        <button class="btn btn-primary !min-h-14 w-full text-xl" :disabled="!!errors.length || !candidate || saving">
+        <button class="btn btn-primary !min-h-14 w-full text-xl" :disabled="saving">
           {{ existing ? 'Enregistrer la correction' : 'Valider la donne' }}
         </button>
       </div>

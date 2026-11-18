@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ErrorList from '../components/ErrorList.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -25,7 +25,7 @@ const teamB = ref<[string, string]>(['', ''])
 const teamNames = ref<[string, string]>(['', ''])
 const tarotCount = ref(rematch?.kind === 'tarot' ? rematch.playerIds.length : 4)
 const tarotPlayers = ref<string[]>(['', '', '', '', '', ''])
-const firstDealerName = ref('')
+const pickedDealer = ref('')
 const busy = ref(false)
 const attempted = ref(false)
 const submitError = ref('')
@@ -44,13 +44,13 @@ if (rematch) {
       rematch.teamIds ? (data.team(rematch.teamIds[1])?.name ?? '') : '',
     ]
   }
-  firstDealerName.value = nameOf(nextAfter(rematch, rematch.deals.at(-1)?.dealerId ?? rematch.firstDealerId))
+  pickedDealer.value = nameOf(nextAfter(rematch, rematch.deals.at(-1)?.dealerId ?? rematch.firstDealerId))
 }
 
 function changeKind(k: GameKind) {
   kind.value = k
   rules.value = JSON.parse(JSON.stringify(data.preferences.defaults[k])) as Rules
-  firstDealerName.value = ''
+  pickedDealer.value = ''
 }
 
 /** Noms dans l’ordre autour de la table : A1, B1, A2, B2, ou l’ordre tarot. */
@@ -75,24 +75,39 @@ const dealerOptions = computed(() => {
   return out
 })
 
-watch(seatNames, (names) => {
-  const trimmed = names.map((n) => n.trim())
-  const current = playerKey(firstDealerName.value)
-  const stillThere = trimmed.some((n) => playerKey(n) === current)
-  if (!stillThere) firstDealerName.value = trimmed.every(Boolean) ? trimmed[0] : ''
+/** Donneur choisi, ou le premier joueur dès que la table est complète. */
+const resolvedDealer = computed(() => {
+  const options = dealerOptions.value
+  const picked = options.find((n) => playerKey(n) === playerKey(pickedDealer.value))
+  if (picked) return picked
+  return seatNames.value.every((n) => playerKey(n)) ? (options[0] ?? '') : ''
 })
+function pickDealer(value: string) {
+  if (playerKey(value)) pickedDealer.value = value
+}
 
 const errors = computed(() => {
   const e: string[] = []
-  const filled = seatNames.value.map((n) => n.trim()).filter(Boolean)
-  if (kind.value !== 'tarot') {
-    if (teamA.value.some((p) => !p.trim())) e.push('Écrivez les deux joueurs de l’équipe A.')
-    if (teamB.value.some((p) => !p.trim())) e.push('Écrivez les deux joueurs de l’équipe B.')
-  } else if (filled.length < tarotCount.value) e.push(`Écrivez les ${tarotCount.value} joueurs autour de la table.`)
-  const keys = filled.map(playerKey)
-  if (new Set(keys).size !== keys.length) e.push('Un joueur ne peut apparaître qu’une seule fois dans une partie.')
-  if (!playerKey(firstDealerName.value)) e.push('Choisissez le premier donneur.')
-  else if (!keys.includes(playerKey(firstDealerName.value))) e.push('Le premier donneur doit faire partie des joueurs.')
+  const seats =
+    kind.value === 'tarot'
+      ? seatNames.value.map((n, i) => [`le joueur ${i + 1}`, n] as const)
+      : [
+          ['le joueur 1 de l’équipe A', teamA.value[0]],
+          ['le joueur 2 de l’équipe A', teamA.value[1]],
+          ['le joueur 1 de l’équipe B', teamB.value[0]],
+          ['le joueur 2 de l’équipe B', teamB.value[1]],
+        ]
+  for (const [label, name] of seats) if (!name.trim()) e.push(`Écrivez le nom pour ${label}.`)
+  const seen = new Map<string, string>()
+  const dupes = new Set<string>()
+  for (const raw of seats.map(([, n]) => n.trim()).filter(Boolean)) {
+    const k = playerKey(raw)
+    const previous = seen.get(k)
+    if (previous) dupes.add(previous)
+    else seen.set(k, raw)
+  }
+  for (const name of dupes) e.push(`« ${name} » est inscrit deux fois. Précisez le nom pour distinguer deux personnes.`)
+  if (!e.length && !playerKey(resolvedDealer.value)) e.push('Choisissez le premier donneur.')
   if (rules.value.kind !== 'tarot' && !(rules.value.target > 0)) e.push('L’objectif doit être un nombre positif.')
   return e
 })
@@ -129,6 +144,21 @@ function placePlayer(raw: string) {
   }
 }
 
+function inputValue(id: string): string {
+  const el = document.getElementById(id)
+  return el instanceof HTMLInputElement ? el.value : ''
+}
+/** Relit les champs : sur téléphone, le dernier nom tapé n’est parfois pas encore dans le formulaire. */
+function syncFromDom() {
+  if (kind.value === 'tarot') {
+    for (let i = 0; i < tarotCount.value; i++) tarotPlayers.value[i] = inputValue(`seat-t-${i + 1}`)
+    return
+  }
+  teamA.value = [inputValue('seat-a1'), inputValue('seat-a2')]
+  teamB.value = [inputValue('seat-b1'), inputValue('seat-b2')]
+  teamNames.value = [inputValue('tn-0'), inputValue('tn-1')]
+}
+
 async function idForName(raw: string): Promise<string> {
   const n = raw.trim()
   const existing = data.similarPlayers(n)[0]
@@ -136,6 +166,8 @@ async function idForName(raw: string): Promise<string> {
 }
 
 async function start() {
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  syncFromDom()
   attempted.value = true
   if (errors.value.length || busy.value) return
   busy.value = true
@@ -153,7 +185,12 @@ async function start() {
       teamBIds = [await idForName(teamB.value[0]), await idForName(teamB.value[1])]
       orderIds.push(teamAIds[0], teamBIds[0], teamAIds[1], teamBIds[1])
     }
-    const dealerAt = seatNames.value.findIndex((n) => playerKey(n) === playerKey(firstDealerName.value))
+    const dealerAt = seatNames.value.findIndex((n) => playerKey(n) === playerKey(resolvedDealer.value))
+    if (dealerAt < 0) {
+      submitError.value = 'Choisissez le premier donneur.'
+      busy.value = false
+      return
+    }
     const g = await data.createGame({
       kind: kind.value,
       name: name.value,
@@ -211,7 +248,7 @@ async function start() {
 
     <section class="card flex flex-col gap-3" aria-labelledby="pl-h">
       <h2 id="pl-h" class="text-xl font-bold">Joueurs</h2>
-      <p class="note">Écrivez un prénom dans chaque place. Un nom nouveau est enregistré tout seul.</p>
+      <p class="muted">Écrivez un nom dans chaque place. Un nom nouveau est enregistré tout seul.</p>
 
       <div v-if="availablePlayers.length" class="flex flex-col gap-2">
         <p class="label">Joueurs déjà enregistrés</p>
@@ -237,9 +274,9 @@ async function start() {
               id="seat-a1"
               v-model="teamA[0]"
               class="input"
-              list="known-players"
-              placeholder="Prénom ou pseudo"
+              placeholder="Ex. Camille"
               autocomplete="off"
+              autocorrect="off"
               autocapitalize="words"
               data-testid="seat-a1"
             />
@@ -250,9 +287,9 @@ async function start() {
               id="seat-a2"
               v-model="teamA[1]"
               class="input"
-              list="known-players"
-              placeholder="Prénom ou pseudo"
+              placeholder="Ex. Louis"
               autocomplete="off"
+              autocorrect="off"
               autocapitalize="words"
               data-testid="seat-a2"
             />
@@ -271,9 +308,9 @@ async function start() {
               id="seat-b1"
               v-model="teamB[0]"
               class="input"
-              list="known-players"
-              placeholder="Prénom ou pseudo"
+              placeholder="Ex. Inès"
               autocomplete="off"
+              autocorrect="off"
               autocapitalize="words"
               data-testid="seat-b1"
             />
@@ -284,9 +321,9 @@ async function start() {
               id="seat-b2"
               v-model="teamB[1]"
               class="input"
-              list="known-players"
-              placeholder="Prénom ou pseudo"
+              placeholder="Ex. Marc"
               autocomplete="off"
+              autocorrect="off"
               autocapitalize="words"
               data-testid="seat-b2"
             />
@@ -311,30 +348,40 @@ async function start() {
             :id="`seat-t-${i}`"
             v-model="tarotPlayers[i - 1]"
             class="input"
-            list="known-players"
-            placeholder="Prénom ou pseudo"
+            placeholder="Ex. Camille"
             autocomplete="off"
+            autocorrect="off"
             autocapitalize="words"
             :data-testid="`seat-t${i}`"
           />
         </div>
       </template>
-      <datalist id="known-players">
-        <option v-for="p in knownPlayers" :key="p.id" :value="p.name" />
-      </datalist>
     </section>
 
-    <div>
-      <label class="label" for="dealer">Premier donneur</label>
-      <select id="dealer" v-model="firstDealerName" class="input" data-testid="first-dealer">
-        <option value="">— Choisir —</option>
-        <option v-for="n in dealerOptions" :key="playerKey(n)" :value="n">{{ n }}</option>
-      </select>
-      <p v-if="firstDealerName" class="note mt-1">
-        Par défaut : {{ kind === 'tarot' ? 'le joueur 1' : 'le joueur 1 de l’équipe A' }}. Vous pouvez en choisir un
-        autre.
+    <fieldset>
+      <legend class="label">Premier donneur</legend>
+      <div v-if="dealerOptions.length" class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Premier donneur">
+        <button
+          v-for="n in dealerOptions"
+          :key="playerKey(n)"
+          type="button"
+          role="radio"
+          :aria-checked="playerKey(n) === playerKey(resolvedDealer)"
+          class="btn justify-start !px-3"
+          :class="playerKey(n) === playerKey(resolvedDealer) ? 'btn-primary' : ''"
+          data-testid="first-dealer"
+          @click="pickDealer(n)"
+        >
+          <span aria-hidden="true">{{ playerKey(n) === playerKey(resolvedDealer) ? '✓' : '' }}</span>
+          <span class="truncate">{{ n }}</span>
+        </button>
+      </div>
+      <p v-else class="muted">Écrivez d’abord les joueurs : ils apparaîtront ici.</p>
+      <p v-if="resolvedDealer" class="muted mt-1">
+        Par défaut : {{ kind === 'tarot' ? 'le joueur 1' : 'le joueur 1 de l’équipe A' }}. Touchez un autre nom pour
+        changer.
       </p>
-    </div>
+    </fieldset>
 
     <details class="card">
       <summary class="cursor-pointer text-lg font-bold">Règles de cette partie</summary>
