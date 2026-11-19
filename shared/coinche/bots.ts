@@ -36,10 +36,54 @@ function takeStrength(hand: Card[], suit: Suit): number {
   )
 }
 
+/** Le preneur qui détient valet et 9 d'atout les joue d'abord, valet puis 9, pour faire tomber les atouts. */
+function drawTrumps(view: RoomView, playable: Card[], trump: Suit): Card | null {
+  const seat = view.you.seat
+  const contract = view.round?.contract
+  if (seat == null || contract?.seat !== seat) return null
+  const trumpCard = (rank: Card['rank']) => playable.find((card) => card.suit === trump && card.rank === rank)
+  const jack = trumpCard('V')
+  const nine = trumpCard('9')
+  if (jack && nine) return jack
+  const jackPlayed = view.round!.tricks.some((trick) =>
+    trick.cards.some((entry) => entry.seat === seat && entry.card.suit === trump && entry.card.rank === 'V'),
+  )
+  return nine && jackPlayed ? nine : null
+}
+
+function lowest(cards: Card[], trump: Suit, led: Suit): Card {
+  return [...cards].sort(
+    (a, b) =>
+      cardPoints(a, trump) - cardPoints(b, trump) ||
+      Number(a.suit === trump) - Number(b.suit === trump) ||
+      cardPower(a, trump, led) - cardPower(b, trump, led),
+  )[0]
+}
+
+/** En défense : encaisser les as, ne jamais entamer à l'atout s'il reste une autre couleur. */
+function defensiveLead(view: RoomView, playable: Card[], trump: Suit): Card {
+  const signal = view.round!.callSignal
+  if (signal && view.you.seat != null && partnerOf(signal.caller) === view.you.seat) {
+    const calledSuit = playable.filter((card) => card.suit === signal.suit)
+    if (calledSuit.length) return lowest(calledSuit, trump, trump)
+  }
+  const side = playable.filter((card) => card.suit !== trump)
+  const pool = side.length ? side : playable
+  const aces = pool.filter((card) => card.rank === 'A')
+  return aces.length ? aces[0] : lowest(pool, trump, trump)
+}
+
 function playCard(view: RoomView, playable: Card[], difficulty: number, randomInt: (n: number) => number): Card {
   const round = view.round!
   const trump = round.contract!.suit
   const trick = round.trick
+  const seat = view.you.seat
+  const defending = seat != null && teamOf(seat) !== teamOf(round.contract!.seat)
+  if (!trick.length) {
+    const draw = drawTrumps(view, playable, trump)
+    if (draw) return draw
+    if (defending) return defensiveLead(view, playable, trump)
+  }
   // Aux niveaux bas, les bots jouent plus simplement et gardent davantage leurs cartes fortes.
   const simplePlayChance = difficulty === 1 ? 55 : difficulty === 2 ? 25 : 0
   if (simplePlayChance > 0 && playable.length > 1 && randomInt(100) < simplePlayChance) {
@@ -60,8 +104,8 @@ function playCard(view: RoomView, playable: Card[], difficulty: number, randomIn
     const sideAces = playable.filter((card) => card.suit !== trump && card.rank === 'A')
     if (sideAces.length) return sideAces[0]
     const trumpCards = playable.filter((card) => card.suit === trump)
-    const isTaker = view.you.seat != null && teamOf(view.you.seat) === teamOf(round.contract!.seat)
-    if (isTaker && trumpCards.length >= 3) {
+    const declaring = view.you.seat != null && teamOf(view.you.seat) === teamOf(round.contract!.seat)
+    if (declaring && trumpCards.length >= 3) {
       return [...trumpCards].sort((a, b) => cardPower(b, trump, trump) - cardPower(a, trump, trump))[0]
     }
     return [...playable].sort((a, b) => cardPoints(a, trump) - cardPoints(b, trump))[0]
@@ -74,30 +118,46 @@ function playCard(view: RoomView, playable: Card[], difficulty: number, randomIn
   const partnerWinning = view.you.seat != null && teamOf(winner) === teamOf(view.you.seat)
   if (partnerWinning) {
     // Ne gaspiller ni points ni atouts maîtres quand le partenaire tient déjà le pli.
-    return [...playable].sort(
-      (a, b) => cardPoints(a, trump) - cardPoints(b, trump) || cardPower(a, trump, led) - cardPower(b, trump, led),
-    )[0]
+    return lowest(playable, trump, led)
   }
 
   const winners = playable.filter((card) => cardPower(card, trump, led) > winningPower)
+  const trickPoints = trick.reduce((sum, entry) => sum + cardPoints(entry.card, trump), 0)
   if (winners.length) {
-    // Si le pli est prenable, fournir la carte la moins chère qui bat la carte maîtresse.
-    return [...winners].sort(
+    const cheap = [...winners].sort(
       (a, b) => cardPoints(a, trump) - cardPoints(b, trump) || cardPower(a, trump, led) - cardPower(b, trump, led),
     )[0]
+    // En défense, ne pas gaspiller valet, 9 ou as d'atout sur un pli sans points.
+    const masterTrump = cheap.suit === trump && (cheap.rank === 'V' || cheap.rank === '9' || cheap.rank === 'A')
+    const losers = playable.filter((card) => !winners.includes(card))
+    if (defending && trickPoints < 10 && masterTrump && losers.length) return lowest(losers, trump, led)
+    return cheap
   }
-  // Sinon, se défausser de la carte qui évitera de laisser des points dans un pli perdu.
-  return [...playable].sort(
-    (a, b) => cardPoints(b, trump) - cardPoints(a, trump) || cardPower(b, trump, led) - cardPower(a, trump, led),
-  )[0]
+  // Pli perdu : la plus petite carte, pour ne pas rendre de points.
+  return lowest(playable, trump, led)
 }
 
+/** +20 seulement avec une main très forte. Un simple fit ne fait monter que de 10, sinon on ne parle pas. */
 function signalRaise(hand: Card[], suit: Suit): number {
-  const hasTopTrump = hand.some((card) => card.suit === suit && (card.rank === 'V' || card.rank === '9'))
+  const trumps = hand.filter((card) => card.suit === suit)
+  const has = (rank: Card['rank']) => trumps.some((card) => card.rank === rank)
   const aces = hand.filter((card) => card.rank === 'A').length
-  if (aces >= 2 || (hasTopTrump && aces >= 1)) return 20
-  if (hasTopTrump || aces === 1) return 10
-  return 10
+  const masters = Number(has('V')) + Number(has('9'))
+  if (masters === 2 || (masters === 1 && aces >= 2)) return 20
+  if (masters === 1 || aces >= 2 || (aces === 1 && trumps.length >= 3)) return 10
+  return 0
+}
+
+/** Un fit modeste ne pousse pas le contrat au-delà de 100. Valet et 9 ensemble peuvent aller jusqu’à 120. */
+function supportRaise(hand: Card[], suit: Suit, current: number): number {
+  const raise = signalRaise(hand, suit)
+  if (raise === 0) return 0
+  const bothMasters =
+    hand.some((card) => card.suit === suit && card.rank === 'V') &&
+    hand.some((card) => card.suit === suit && card.rank === '9')
+  const ceiling = bothMasters ? 120 : 100
+  if (current + raise <= ceiling) return raise
+  return current + 10 <= ceiling ? 10 : 0
 }
 
 function tarotStrength(hand: TarotCard[]): number {
@@ -178,7 +238,7 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
       teamOf(current.seat) === teamOf(seat)
     ) {
       const currentStrength = takeStrength(view.hand, current.suit)
-      const extra = signalRaise(view.hand, current.suit)
+      const extra = supportRaise(view.hand, current.suit, current.value)
       const value = current.value + extra
       const supportThreshold = [9.5, 8, 6, 5.5, 5][difficulty - 1]
       const hasAce = view.hand.some((card) => card.rank === 'A')
@@ -186,16 +246,24 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
         view.hand.filter((card) => card.rank === 'A').length >= 2 ||
         (hasAce && view.hand.some((card) => card.suit === current.suit && (card.rank === 'V' || card.rank === '9')))
       const canSupport =
-        difficulty === 3
-          ? currentStrength >= 6 || hasAce
-          : currentStrength >= supportThreshold && (difficulty > 1 || strongSupport)
-      if (canSupport) {
-        if (value <= a.bid.max) return { type: 'bid', value, suit: current.suit }
-      }
+        extra > 0 && currentStrength >= supportThreshold && (difficulty > 1 || strongSupport)
+      if (canSupport && value <= a.bid.max) return { type: 'bid', value, suit: current.suit }
+      // Le partenaire a déjà choisi la couleur : on n'en change que si notre jeu est clairement meilleur.
+      const suit = [...SUITS].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
+      const ownStrength = takeStrength(view.hand, suit)
+      const opening = [14.5, 12, 9.5, 8.5, 7.5][difficulty - 1]
+      const perStep = [3, 2.6, 2.2, 1.8, 1.5][difficulty - 1]
+      const needed = opening + Math.max(0, (a.bid.min - 80) / 10) * perStep
+      const betterGame = suit !== current.suit && ownStrength >= currentStrength + 5 && ownStrength >= opening + 4
+      if (betterGame && ownStrength >= needed) return { type: 'bid', value: a.bid.min, suit }
+      return { type: 'pass' }
     }
     const suit = [...SUITS].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
-    if (takeStrength(view.hand, suit) >= [14.5, 12, 9.5, 8.5, 7.5][difficulty - 1])
-      return { type: 'bid', value: a.bid.min, suit }
+    // La main qui ouvre à 80 ne poursuit pas jusqu’à 120 : chaque palier demande une main plus forte.
+    const opening = [14.5, 12, 9.5, 8.5, 7.5][difficulty - 1]
+    const perStep = [3, 2.6, 2.2, 1.8, 1.5][difficulty - 1]
+    const needed = opening + Math.max(0, (a.bid.min - 80) / 10) * perStep
+    if (takeStrength(view.hand, suit) >= needed) return { type: 'bid', value: a.bid.min, suit }
     return { type: 'pass' }
   }
   return a.canPass ? { type: 'pass' } : null
