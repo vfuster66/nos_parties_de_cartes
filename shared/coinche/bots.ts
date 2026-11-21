@@ -245,8 +245,7 @@ export function nextBotIntent(view: RoomView, randomInt: (n: number) => number):
       const strongSupport =
         view.hand.filter((card) => card.rank === 'A').length >= 2 ||
         (hasAce && view.hand.some((card) => card.suit === current.suit && (card.rank === 'V' || card.rank === '9')))
-      const canSupport =
-        extra > 0 && currentStrength >= supportThreshold && (difficulty > 1 || strongSupport)
+      const canSupport = extra > 0 && currentStrength >= supportThreshold && (difficulty > 1 || strongSupport)
       if (canSupport && value <= a.bid.max) return { type: 'bid', value, suit: current.suit }
       // Le partenaire a déjà choisi la couleur : on n'en change que si notre jeu est clairement meilleur.
       const suit = [...SUITS].sort((x, y) => takeStrength(view.hand, y) - takeStrength(view.hand, x))[0]
