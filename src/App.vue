@@ -1,14 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onErrorCaptured, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import ConfirmHost from './components/ConfirmHost.vue'
 import UpdatePrompt from './components/UpdatePrompt.vue'
+import { onlineEnabled } from './online/config'
 import { useData } from './stores/data'
 
 const data = useData()
 const route = useRoute()
+const renderError = ref('')
 // L'écran de jeu en ligne occupe tout l'espace : pas de barre de navigation par-dessus la main.
 const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
+const tabs = computed(() => [
+  ['/', 'Accueil', '🏠'],
+  ['/historique', 'Historique', '📜'],
+  ['/classements', 'Classements', '🏆'],
+  onlineEnabled ? ['/en-ligne', 'En ligne', '🌐'] : ['/parametres', 'Réglages', '⚙️'],
+])
+onErrorCaptured((err) => {
+  renderError.value = err instanceof Error ? err.message : String(err)
+  return false
+})
+watch(
+  () => route.fullPath,
+  () => {
+    renderError.value = ''
+  },
+)
 </script>
 
 <template>
@@ -24,7 +42,11 @@ const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
           {{ data.saveError }}
           <button class="btn mt-2 w-full" @click="data.saveError = null">Fermer ce message</button>
         </div>
-        <RouterView />
+        <div v-if="renderError" class="err" role="alert">
+          Cet écran n’a pas pu s’afficher : {{ renderError }}
+          <button class="btn mt-2 w-full" @click="renderError = ''">Réessayer</button>
+        </div>
+        <RouterView v-else />
       </template>
     </main>
     <nav
@@ -33,19 +55,10 @@ const inRoom = computed(() => route.path.startsWith('/en-ligne/salon/'))
       aria-label="Navigation principale"
     >
       <ul class="mx-auto flex max-w-2xl">
-        <li
-          v-for="l in [
-            ['/', 'Accueil', '🏠'],
-            ['/en-ligne', 'En ligne', '🌐'],
-            ['/classements', 'Classements', '🏆'],
-            ['/parametres', 'Réglages', '⚙️'],
-          ]"
-          :key="l[0]"
-          class="flex-1"
-        >
+        <li v-for="l in tabs" :key="l[0]" class="flex-1">
           <RouterLink
             :to="l[0]"
-            class="flex min-h-14 flex-col items-center justify-center border-t-4 border-transparent text-sm font-semibold text-slate-700"
+            class="flex min-h-14 flex-col items-center justify-center whitespace-nowrap border-t-4 border-transparent px-0.5 text-xs font-semibold text-slate-700"
             exact-active-class="!border-gold bg-teal-50 text-teal-900"
           >
             <span aria-hidden="true">{{ l[2] }}</span

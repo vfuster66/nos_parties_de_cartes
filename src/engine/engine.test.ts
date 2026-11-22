@@ -434,6 +434,17 @@ describe('statistiques', () => {
         .sort(),
     ).toEqual(['a', 'b'])
   })
+  it('une table en ligne compte dans le classement sans ses donnes', () => {
+    const g = mkGame('coinche', 4, {
+      id: 'online',
+      status: 'finished',
+      online: { roomId: 'room', rounds: 3, totals: [320, 180] },
+    })
+    const parts = participations(g)
+    expect(parts.find((p) => p.teamId === 't1')?.result).toBe('win')
+    expect(parts.find((p) => p.teamId === 't1')?.score).toBe(320)
+    expect(parts.find((p) => p.teamId === 't1')?.takes).toEqual([])
+  })
   it('recalcul après correction d’une partie terminée', () => {
     const g = mkGame('coinche', 4, { status: 'finished' })
     g.deals = [deal('a', co())]

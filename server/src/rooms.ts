@@ -428,7 +428,7 @@ export class RoomManager {
 
   /** Nettoyage périodique : salons terminés anciens et salons d'attente abandonnés. */
   purge(): void {
-    const removed = this.d.store.purge(this.d.now(), 30 * DAY, 2 * DAY)
+    const removed = this.d.store.purge(this.d.now(), 30 * DAY, 2 * DAY, 14 * DAY)
     for (const [id, room] of this.rooms) {
       const st = room.state
       if (

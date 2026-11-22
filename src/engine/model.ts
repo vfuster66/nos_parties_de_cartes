@@ -34,6 +34,13 @@ export interface Deal {
   createdAt: string
 }
 
+/** Totaux d'une table en ligne, sans le détail des donnes. */
+export interface OnlineSnapshot {
+  roomId: string
+  rounds: number
+  totals: number[]
+}
+
 export interface Game {
   id: string
   kind: GameKind
@@ -49,6 +56,8 @@ export interface Game {
   firstDealerId: string
   rules: Rules
   deals: Deal[]
+  /** Présent quand la partie vient d'une table en ligne et n'a pas encore de donne saisie. */
+  online?: OnlineSnapshot
 }
 
 export interface Draft {

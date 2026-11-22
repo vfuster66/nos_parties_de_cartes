@@ -83,8 +83,8 @@ function setLevel(l: CoincheForm['level']) {
       </template>
     </template>
     <template #after-points>
-      <label class="flex min-h-12 items-center gap-3 rounded-xl border-2 border-slate-300 p-3">
-        <input v-model="f.allTricks" type="checkbox" class="h-6 w-6" />
+      <label class="flex min-h-12 items-start gap-3 rounded-xl border-2 border-slate-300 p-3">
+        <input v-model="f.allTricks" type="checkbox" class="mt-1 h-6 w-6 shrink-0" />
         <span>Capot réalisé : les preneurs ont remporté tous les plis (la saisie des points est alors ignorée)</span>
       </label>
     </template>

@@ -6,6 +6,21 @@ import { dirname } from 'node:path'
 import Database from 'better-sqlite3'
 import type { MatchState } from '../../shared/coinche/types'
 
+const STATUSES = new Set(['lobby', 'playing', 'finished', 'abandoned'])
+
+/** Ignore une ligne illisible au lieu de faire échouer le démarrage du serveur. */
+function readState(raw: string): MatchState | null {
+  try {
+    const value: unknown = JSON.parse(raw)
+    if (!value || typeof value !== 'object') return null
+    const state = value as Partial<MatchState>
+    if (state.schema !== 1 || typeof state.id !== 'string' || !state.status || !STATUSES.has(state.status)) return null
+    return state as MatchState
+  } catch {
+    return null
+  }
+}
+
 export const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex')
 
 export class Store {
@@ -55,19 +70,22 @@ export class Store {
 
   findByCode(code: string): MatchState | null {
     const row = this.db.prepare('SELECT state FROM rooms WHERE code=?').get(code) as { state: string } | undefined
-    return row ? (JSON.parse(row.state) as MatchState) : null
+    return row ? readState(row.state) : null
   }
 
   loadActive(): MatchState[] {
     const rows = this.db.prepare("SELECT state FROM rooms WHERE status IN ('lobby','playing')").all() as {
       state: string
     }[]
-    return rows.map((r) => JSON.parse(r.state) as MatchState)
+    return rows.flatMap((r) => {
+      const state = readState(r.state)
+      return state ? [state] : []
+    })
   }
 
   loadRoom(id: string): MatchState | null {
     const row = this.db.prepare('SELECT state FROM rooms WHERE id=?').get(id) as { state: string } | undefined
-    return row ? (JSON.parse(row.state) as MatchState) : null
+    return row ? readState(row.state) : null
   }
 
   setToken(roomId: string, participantId: string, token: string): void {
@@ -99,13 +117,13 @@ export class Store {
     this.db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)').run(key, value)
   }
 
-  /** Supprime les salons terminés/abandonnés anciens et les salons d'attente délaissés. */
-  purge(now: number, finishedMaxAgeMs: number, lobbyMaxAgeMs: number): number {
+  /** Supprime les salons terminés, les salons d'attente délaissés, et les parties en cours sans mise à jour. */
+  purge(now: number, finishedMaxAgeMs: number, lobbyMaxAgeMs: number, playingMaxAgeMs: number): number {
     const r = this.db
       .prepare(
-        "DELETE FROM rooms WHERE (status IN ('finished','abandoned') AND updated_at < ?) OR (status='lobby' AND updated_at < ?)",
+        "DELETE FROM rooms WHERE (status IN ('finished','abandoned') AND updated_at < ?) OR (status='lobby' AND updated_at < ?) OR (status='playing' AND updated_at < ?)",
       )
-      .run(now - finishedMaxAgeMs, now - lobbyMaxAgeMs)
+      .run(now - finishedMaxAgeMs, now - lobbyMaxAgeMs, now - playingMaxAgeMs)
     return r.changes
   }
 

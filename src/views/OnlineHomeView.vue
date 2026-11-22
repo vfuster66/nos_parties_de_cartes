@@ -4,13 +4,16 @@ import { RouterLink, useRouter } from 'vue-router'
 import type { OnlineGame } from '../../shared/coinche/types'
 import { formatCode } from '../../shared/protocol'
 import { onlineEnabled } from '../online/config'
-import { lastNickname, loadResults, loadSessions } from '../online/local'
+import { lastNickname, linkResult, loadResults, loadSessions } from '../online/local'
 import type { OnlineResult } from '../online/local'
 import { useOnline } from '../online/store'
+import type { GameKind } from '../engine/types'
+import { useData } from '../stores/data'
 import PageHeader from '../components/PageHeader.vue'
 
 const props = defineProps<{ code?: string }>()
 const online = useOnline()
+const data = useData()
 const router = useRouter()
 const nickname = ref(lastNickname())
 const game = ref<OnlineGame>('coinche')
@@ -39,6 +42,71 @@ async function join(): Promise<void> {
   if (id) await router.push(`/en-ligne/salon/${id}`)
 }
 const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+const linking = ref<string | null>(null)
+const picks = ref<Record<number, string>>({})
+const linkError = ref('')
+const linkBusy = ref(false)
+
+function resultKind(r: OnlineResult): GameKind {
+  if (r.game === 'tarot' || r.formula?.startsWith('tarot')) return 'tarot'
+  if (r.formula === 'belote' || r.formula === 'belote-annonces' || r.name.toLowerCase().includes('belote'))
+    return 'belote'
+  return 'coinche'
+}
+function openLink(r: OnlineResult): void {
+  linking.value = r.roomId
+  linkError.value = ''
+  const next: Record<number, string> = {}
+  for (const p of r.players) next[p.seat] = data.similarPlayers(p.nickname)[0]?.id ?? ''
+  picks.value = next
+}
+async function confirmLink(r: OnlineResult): Promise<void> {
+  linkError.value = ''
+  const kind = resultKind(r)
+  const count = kind === 'tarot' ? r.totals.length : 4
+  const chosen: string[] = []
+  for (let seat = 0; seat < count; seat++) {
+    const nick = r.players.find((p) => p.seat === seat)?.nickname
+    if (!nick) {
+      linkError.value = 'Il manque un joueur pour une place.'
+      return
+    }
+    const id = picks.value[seat] ?? ''
+    if (id && chosen.includes(id)) {
+      linkError.value = 'Deux places ne peuvent pas être le même joueur.'
+      return
+    }
+    if (id) chosen.push(id)
+  }
+  linkBusy.value = true
+  try {
+    const playerIds: string[] = []
+    for (let seat = 0; seat < count; seat++) {
+      const nick = r.players.find((p) => p.seat === seat)!.nickname
+      playerIds.push(picks.value[seat] || (await data.addPlayer(nick)).id)
+    }
+    const game = await data.adoptOnlineResult({
+      name: r.name,
+      kind,
+      announcements: r.formula !== 'belote',
+      status: r.status,
+      endedAt: r.endedAt,
+      rounds: r.rounds,
+      roomId: r.roomId,
+      totals: r.totals,
+      playerIds,
+      teamNames: r.game === 'tarot' ? undefined : r.teamNames,
+    })
+    linkResult(r.roomId, game.id)
+    results.value = loadResults()
+    linking.value = null
+    await router.push(`/partie/${game.id}`)
+  } catch (e) {
+    linkError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    linkBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -149,9 +217,39 @@ const when = (t: number) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'sh
             {{ r.winnerTeam === r.myTeam ? '🏆 Victoire' : 'Défaite' }}
           </p>
           <p class="muted text-sm">{{ r.players.map((p) => p.nickname).join(', ') }}</p>
+          <RouterLink
+            v-if="r.linkedGameId && data.game(r.linkedGameId)"
+            :to="`/partie/${r.linkedGameId}`"
+            class="btn mt-2 w-full"
+            >Voir dans le compteur</RouterLink
+          >
+          <button v-else class="btn mt-2 w-full" type="button" data-testid="link-online" @click="openLink(r)">
+            Relier aux joueurs du compteur
+          </button>
+          <form
+            v-if="linking === r.roomId"
+            class="mt-2 flex flex-col gap-2"
+            data-testid="link-online-form"
+            @submit.prevent="confirmLink(r)"
+          >
+            <p class="text-sm">Chaque pseudo devient un joueur. Un nom déjà connu est proposé.</p>
+            <label v-for="p in [...r.players].sort((a, b) => a.seat - b.seat)" :key="p.seat" class="text-sm">
+              Place {{ p.seat + 1 }} · {{ p.nickname }}
+              <select v-model="picks[p.seat]" class="input mt-1">
+                <option value="">Nouveau joueur : {{ p.nickname }}</option>
+                <option v-for="pl in data.players" :key="pl.id" :value="pl.id">{{ pl.name }}</option>
+              </select>
+            </label>
+            <p v-if="linkError" class="err" role="alert">{{ linkError }}</p>
+            <button class="btn btn-primary" type="submit" :disabled="linkBusy">
+              {{ linkBusy ? 'Enregistrement…' : 'Ajouter aux classements' }}
+            </button>
+          </form>
         </li>
       </ul>
-      <p class="muted mt-2 text-sm">Résultats en ligne, séparés des parties locales.</p>
+      <p class="muted mt-2 text-sm">
+        Relier une partie recopie son score dans le compteur. Les donnes, elles, restent sur la table.
+      </p>
     </section>
   </template>
 </template>

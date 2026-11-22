@@ -90,6 +90,22 @@ describe('tarot en ligne à quatre', () => {
       expect(act(s, 'p0', { type: 'tarotFinish' }).status).toBe('finished')
     },
   )
+
+  it('enchaîne la donne suivante même si un score dépasse le seuil', () => {
+    let s = start()
+    s.config.tarotEndMode = 'threshold'
+    s.config.target = 1000
+    s.tarot!.totals = [1500, -500, -500, -500]
+    s.tarot!.round.phase = 'summary'
+    expect(act(structuredClone(s), 'p0', { type: 'tarotFinish' }).status).toBe('finished')
+    s = act(s, 'p0', { type: 'nextRound' })
+    expect(s.status).toBe('playing')
+    expect(s.tarot!.round.phase).toBe('summary')
+    for (const pid of ['p1', 'p2', 'p3']) s = act(s, pid, { type: 'nextRound' })
+    expect(s.status).toBe('playing')
+    expect(s.tarot!.round.phase).toBe('bidding')
+    expect(s.tarot!.totals).toEqual([1500, -500, -500, -500])
+  })
 })
 
 it('refuse la quatrième place et le quatrième donneur au tarot à trois', () => {

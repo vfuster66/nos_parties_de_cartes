@@ -15,7 +15,10 @@ const route = useRoute()
 const router = useRouter()
 
 const rematch = data.game(String(route.query.rematch ?? ''))
-const kind = ref<GameKind>(rematch?.kind ?? 'coinche')
+const askedKind = String(route.query.kind ?? '')
+const kind = ref<GameKind>(
+  rematch?.kind ?? (askedKind === 'belote' || askedKind === 'tarot' || askedKind === 'coinche' ? askedKind : 'coinche'),
+)
 const name = ref('')
 const eveningId = ref<string>(rematch?.eveningId ?? String(route.query.evening ?? ''))
 const newEvening = reactive({ show: false, name: '', date: todayIso() })
@@ -233,8 +236,9 @@ async function start() {
 
     <div>
       <label class="label" for="g-ev">Soirée</label>
+      <p class="muted mb-1">Une soirée regroupe les parties du même jour dans les classements.</p>
       <select id="g-ev" v-model="eveningId" class="input">
-        <option value="">Partie indépendante (sans soirée)</option>
+        <option value="">Partie indépendante</option>
         <option v-for="e in data.evenings" :key="e.id" :value="e.id">{{ e.name || 'Soirée' }} — {{ e.date }}</option>
         <option value="__new">＋ Nouvelle soirée…</option>
       </select>

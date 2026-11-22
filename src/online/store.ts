@@ -76,15 +76,22 @@ export const useOnline = defineStore('online', () => {
     return s
   }
 
-  function emit<T>(event: string, payload: unknown, timeoutMs = 8000): Promise<Ack<T>> {
+  function emit<T>(event: string, payload: unknown, timeoutMs = 8000, onLate?: (ack: Ack<T>) => void): Promise<Ack<T>> {
     return new Promise((resolve) => {
       const s = ensureSocket()
-      const timer = setTimeout(
-        () => resolve({ ok: false, code: 'timeout', message: 'Le serveur ne répond pas.' }),
-        timeoutMs,
-      )
+      let settled = false
+      const timer = setTimeout(() => {
+        if (settled) return
+        settled = true
+        resolve({ ok: false, code: 'timeout', message: 'Le serveur ne répond pas.' })
+      }, timeoutMs)
       s.emit(event, payload, (r: Ack<T>) => {
         clearTimeout(timer)
+        if (settled) {
+          onLate?.(r)
+          return
+        }
+        settled = true
         resolve(r)
       })
     })
@@ -122,7 +129,12 @@ export const useOnline = defineStore('online', () => {
       error.value = (e as Error).message
       return null
     }
-    const r = await emit<{ grant: SessionGrant }>('room:create', { nickname, game })
+    const r = await emit<{ grant: SessionGrant }>('room:create', { nickname, game }, 8000, (late) => {
+      if (late.ok) {
+        adopt(late.grant, nickname)
+        error.value = null
+      }
+    })
     if (!r.ok) {
       error.value = r.message
       return null
@@ -139,7 +151,12 @@ export const useOnline = defineStore('online', () => {
       error.value = (e as Error).message
       return null
     }
-    const r = await emit<{ grant: SessionGrant }>('room:join', { code, nickname })
+    const r = await emit<{ grant: SessionGrant }>('room:join', { code, nickname }, 8000, (late) => {
+      if (late.ok) {
+        adopt(late.grant, nickname)
+        error.value = null
+      }
+    })
     if (!r.ok) {
       error.value = r.message
       return null
@@ -214,6 +231,7 @@ export const useOnline = defineStore('online', () => {
       saveResult({
         ...common,
         game: 'tarot',
+        formula: v.config.game,
         name: v.config.gameName || 'Tarot en ligne',
         totals: v.tarot.totals,
         rounds: v.tarot.completed.filter((round) => round.detail).length,
@@ -223,6 +241,7 @@ export const useOnline = defineStore('online', () => {
     if (!v.result) return
     saveResult({
       ...common,
+      formula: v.config.game,
       name: v.config.gameName || (v.config.game?.startsWith('belote') ? 'Belote en ligne' : 'Coinche en ligne'),
       teamNames: v.config.teamNames,
       totals: v.result.totals,

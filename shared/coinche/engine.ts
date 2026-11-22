@@ -443,12 +443,13 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
         const round = s.tarot.round
         if (cmd.type === 'tarotFinish') {
           hostOnly()
-          if (s.config.tarotEndMode === 'threshold' || round.phase !== 'summary')
-            fail('wrong_phase', 'La clôture manuelle est disponible entre deux donnes en mode arrêt libre.')
+          if (round.phase !== 'summary')
+            fail('wrong_phase', 'On termine la partie entre deux donnes, une fois le score affiché.')
           s.status = 'finished'
           s.endedAt = ctx.now
         } else {
           if (ctx.paused) fail('paused', 'Partie en pause : un joueur est déconnecté.')
+          // Le seuil ne coupe pas la table : la donne suivante reste possible, l'hôte arrête quand il veut.
           playTarot(
             s.tarot,
             seat!,
@@ -456,14 +457,6 @@ export function applyCommand(state: MatchState, actorId: string, cmd: Command, c
             s.seats.map((id) => id!),
             ctx.randomInt,
           )
-          if (
-            s.config.tarotEndMode === 'threshold' &&
-            s.tarot.round.phase === 'summary' &&
-            s.tarot.totals.some((score) => Math.abs(score) >= s.config.target)
-          ) {
-            s.status = 'finished'
-            s.endedAt = ctx.now
-          }
         }
       } else gameCommand(s, seat, cmd, ctx)
   }

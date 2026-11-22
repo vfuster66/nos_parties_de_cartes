@@ -1,6 +1,6 @@
 import type { BeloteInput } from './belote'
 import type { CoincheInput } from './coinche'
-import { computeGame, computeResult, entityPlayerIds } from './game'
+import { computeGame, computeResult, entityPlayerIds, scoreTotals } from './game'
 import type { Game, Player, Team } from './model'
 import type { GameKind } from './types'
 
@@ -40,7 +40,8 @@ export interface Participation {
 export function participations(g: Game): Participation[] {
   if (g.status !== 'finished') return []
   const state = computeGame(g)
-  const res = computeResult(g, state.totals)
+  const totals = scoreTotals(g, state)
+  const res = computeResult(g, totals)
   const takesAll: Participation['takes'] = []
   for (const row of state.rows) {
     if (row.deal.passed || !row.deal.input) continue
@@ -54,7 +55,7 @@ export function participations(g: Game): Participation[] {
       })
     } else if (row.tarotDetail) takesAll.push({ playerId: input.takerId, outcome: row.tarotDetail.outcome })
   }
-  return state.totals.map((score, idx) => {
+  return totals.map((score, idx) => {
     const ids = entityPlayerIds(g, idx)
     const win = res.winners.includes(idx)
     return {

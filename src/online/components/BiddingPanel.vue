@@ -41,27 +41,33 @@ watch(
 const busy = computed(() => !!online.pending)
 const myTurn = computed(() => round.value.turn === props.view.you.seat)
 const canBid = computed(() => value.value != null && suit.value != null && !busy.value)
-const partnerRaises = computed(() => {
+const raises = computed(() => {
   const contract = round.value.contract
   const bid = a.value.bid
   const seat = props.view.you.seat
   if (
+    !myTurn.value ||
     !contract ||
     typeof contract.value !== 'number' ||
     !bid ||
     seat == null ||
-    contract.seat === seat ||
-    contract.seat % 2 !== seat % 2
+    contract.seat === seat
   )
     return []
-  const currentValue = contract.value
-  return [10, 20].filter((raise) => currentValue + raise <= bid.max)
+  const current = contract.value
+  return [10, 20, 30].filter((raise) => current + raise <= bid.max)
+})
+const partnerCall = computed(() => {
+  const contract = round.value.contract
+  const seat = props.view.you.seat
+  return !!contract && seat != null && contract.seat % 2 === seat % 2
 })
 
 async function quickRaise(raise: number): Promise<void> {
   const contract = round.value.contract
   if (!contract || typeof contract.value !== 'number' || busy.value) return
-  await online.send('bid', { value: contract.value + raise, suit: contract.suit })
+  if (partnerCall.value) await online.send('bid', { value: contract.value + raise, suit: contract.suit })
+  else value.value = contract.value + raise
 }
 
 async function announce(): Promise<void> {
@@ -158,26 +164,36 @@ const turnName = computed(() => (round.value.turn == null ? '' : nameOfSeat(prop
         </button>
       </div>
       <div v-if="a.bid">
-        <div
-          v-if="partnerRaises.length"
-          class="mb-2 flex items-center gap-2"
-          role="group"
-          aria-label="Relances rapides"
-        >
-          <span class="text-sm font-semibold">{{ SUIT_SYMBOLS[round.contract!.suit] }}</span>
-          <button
-            v-for="raise in partnerRaises"
-            :key="raise"
-            class="btn !min-h-10 flex-1"
-            :disabled="busy"
-            :aria-label="`Relancer de ${raise} dans ${suitText(round.contract!.suit)}`"
-            :title="
-              raise === 10 ? 'Atout fort (valet ou neuf) ou un as' : 'Deux as, ou un as avec valet ou neuf d’atout'
-            "
-            @click="quickRaise(raise)"
-          >
-            +{{ raise }}
-          </button>
+        <div v-if="raises.length" class="mb-2 flex flex-col gap-1.5" role="group" aria-label="Appels">
+          <p class="text-sm font-semibold">
+            <template v-if="partnerCall">
+              Appel dans {{ SUIT_SYMBOLS[round.contract!.suit] }} {{ suitText(round.contract!.suit) }} : un tap annonce
+              la même couleur.
+            </template>
+            <template v-else>De mieux : le bouton choisit la valeur, la couleur se choisit ensuite.</template>
+          </p>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button
+              v-for="raise in raises"
+              :key="raise"
+              class="btn !min-h-12 flex-col !gap-0 !px-1"
+              :disabled="busy"
+              :aria-label="
+                partnerCall
+                  ? `Appel de ${raise} dans ${suitText(round.contract!.suit)}`
+                  : `${raise} de mieux, puis choisir la couleur`
+              "
+              @click="quickRaise(raise)"
+            >
+              <span>+{{ raise }}</span>
+              <span class="text-xs font-medium">{{
+                raise === 10 ? 'fort' : raise === 20 ? 'deux as' : 'très fort'
+              }}</span>
+            </button>
+          </div>
+          <p class="text-xs text-slate-700">
+            +10 atout fort ou un as · +20 deux as, ou un as avec valet ou neuf · +30 main très forte
+          </p>
         </div>
         <p class="label">Valeur</p>
         <div class="grid grid-cols-5 gap-1.5" role="group" aria-label="Valeur du contrat">

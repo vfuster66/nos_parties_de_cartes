@@ -9,10 +9,14 @@ import { formatCode } from '../../shared/protocol'
 import { useData } from '../stores/data'
 
 const data = useData()
-const resume = computed(() => data.lastActiveGame)
+const openGames = computed(() =>
+  [...data.games].filter((g) => g.status === 'in_progress').sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+)
+const resume = computed(() => openGames.value.find((g) => g.deals.length > 0) ?? openGames.value[0])
+const otherOpen = computed(() => openGames.value.filter((g) => g.id !== resume.value?.id))
 const recent = computed(() =>
   [...data.games]
-    .filter((g) => g.id !== resume.value?.id)
+    .filter((g) => g.status !== 'in_progress' && g.id !== resume.value?.id)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
     .slice(0, 3),
 )
@@ -25,9 +29,9 @@ const lastRoom = computed(
 )
 const links = [
   ['/soirees', '🌙', 'Soirées'],
-  ['/historique', '📜', 'Historique'],
   ['/joueurs', '👤', 'Joueurs'],
   ['/equipes', '👥', 'Équipes'],
+  ['/parametres', '⚙️', 'Réglages'],
 ]
 </script>
 
@@ -42,9 +46,9 @@ const links = [
   >
     <h2 id="count-title" class="text-2xl font-bold">✏️ Compter une partie</h2>
     <div class="mb-3 mt-1 flex flex-wrap gap-1.5" aria-label="Jeux disponibles hors connexion">
-      <span class="badge bg-white/15 text-white">Coinche</span>
-      <span class="badge bg-white/15 text-white">Belote</span>
-      <span class="badge bg-white/15 text-white">Tarot</span>
+      <RouterLink to="/nouvelle?kind=coinche" class="badge bg-white/15 text-white">Coinche</RouterLink>
+      <RouterLink to="/nouvelle?kind=belote" class="badge bg-white/15 text-white">Belote</RouterLink>
+      <RouterLink to="/nouvelle?kind=tarot" class="badge bg-white/15 text-white">Tarot</RouterLink>
       <span class="badge bg-white/15 text-white">Hors connexion</span>
     </div>
     <div class="flex flex-col gap-2.5">
@@ -96,6 +100,11 @@ const links = [
         Créer ou rejoindre un salon
       </RouterLink>
     </div>
+  </section>
+
+  <section v-if="otherOpen.length" class="mb-4" aria-labelledby="open-h">
+    <h2 id="open-h" class="mb-2 text-xl font-bold">Autres parties en cours</h2>
+    <div class="flex flex-col gap-2"><GameCard v-for="g in otherOpen" :key="g.id" :game="g" /></div>
   </section>
 
   <nav aria-label="Raccourcis" class="mb-5 grid grid-cols-4 gap-2">
