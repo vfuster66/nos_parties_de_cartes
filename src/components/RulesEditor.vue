@@ -5,6 +5,13 @@ import SegmentedChoice from './SegmentedChoice.vue'
 
 const rules = defineModel<Rules>({ required: true })
 const num = (e: Event) => Number((e.target as HTMLInputElement).value)
+function setPositive(e: Event, apply: (n: number) => void) {
+  const n = num(e)
+  if (Number.isFinite(n) && n > 0) apply(n)
+}
+function setAnnouncements(v: string) {
+  if (rules.value.kind === 'belote') rules.value.announcements = v === 'oui'
+}
 </script>
 
 <template>
@@ -27,7 +34,7 @@ const num = (e: Event) => Number((e.target as HTMLInputElement).value)
           inputmode="numeric"
           min="1"
           :value="rules.target"
-          @input="rules.target = num($event)"
+          @input="setPositive($event, (n) => rules.kind !== 'tarot' && (rules.target = n))"
         />
       </div>
       <SegmentedChoice
@@ -38,7 +45,7 @@ const num = (e: Event) => Number((e.target as HTMLInputElement).value)
           { value: 'oui', label: 'Avec annonces' },
           { value: 'non', label: 'Sans annonces' },
         ]"
-        @update:model-value="(v) => ((rules as any).announcements = v === 'oui')"
+        @update:model-value="setAnnouncements"
       />
       <p class="muted">Égalité : une donne supplémentaire.</p>
     </template>
@@ -60,7 +67,7 @@ const num = (e: Event) => Number((e.target as HTMLInputElement).value)
           inputmode="numeric"
           min="1"
           :value="rules.threshold"
-          @input="rules.threshold = num($event)"
+          @input="setPositive($event, (n) => rules.kind === 'tarot' && (rules.threshold = n))"
         />
       </div>
       <fieldset>

@@ -137,6 +137,27 @@ const results = computed(() =>
     .sort((a, b) => b.score - a.score),
 )
 const myRow = computed(() => results.value.findIndex((r) => r.seat === me.value))
+const thresholdReached = computed(
+  () =>
+    props.view.config.tarotEndMode === 'threshold' &&
+    tarot.value.totals.some((score) => Math.abs(score) >= props.view.config.target),
+)
+const waitingNames = computed(() => {
+  const ready = new Set<number>(tarot.value.ready)
+  return Array.from({ length: n.value }, (_, seat) => seat as Seat)
+    .filter((seat) => !ready.has(seat))
+    .map((seat) => player(seat))
+})
+async function finishMatch(): Promise<void> {
+  if (
+    await askConfirm({
+      title: 'Terminer la partie ?',
+      message: 'Le score de cette donne est gardé. Il n’y aura pas de donne suivante.',
+      confirmLabel: 'Terminer',
+    })
+  )
+    await online.send('tarotFinish')
+}
 const PHASES: Record<string, string> = {
   bidding: 'Enchères',
   call: 'Appel',
@@ -393,6 +414,9 @@ async function abandon() {
         </ul>
       </details>
       <template v-if="active">
+        <p v-if="thresholdReached" class="note" role="status">
+          Seuil de ±{{ view.config.target }} atteint. Vous pouvez encore enchaîner une donne, ou arrêter ici.
+        </p>
         <button
           v-if="tarot.actions.next"
           class="btn btn-primary sticky bottom-2 z-10 !min-h-14 text-lg shadow-xl"
@@ -400,17 +424,17 @@ async function abandon() {
           data-testid="next-round"
           @click="online.send('nextRound')"
         >
-          Prêt pour la donne suivante
+          Donne suivante
         </button>
-        <p class="muted text-center" role="status">Prêts : {{ tarot.ready.length }} / {{ n }}</p>
-        <button
-          v-if="view.you.isHost && view.config.tarotEndMode !== 'threshold'"
-          class="btn"
-          :disabled="busy"
-          @click="online.send('tarotFinish')"
-        >
-          Terminer la partie
-        </button>
+        <p class="text-center text-base" role="status">
+          <template v-if="waitingNames.length">
+            La donne suivante démarre quand tout le monde a confirmé. En attente de
+            <strong>{{ waitingNames.join(', ') }}</strong
+            >.
+          </template>
+          <template v-else>Tout le monde est prêt.</template>
+        </p>
+        <button v-if="view.you.isHost" class="btn" :disabled="busy" @click="finishMatch">Terminer la partie</button>
       </template>
     </section>
 

@@ -83,7 +83,9 @@ const initial = (name: string): string => [...name.trim()][0]?.toUpperCase() ?? 
 const rulesSummary = computed(() => {
   const c = props.view.config
   return tarot.value
-    ? `Objectif ${c.target} · ${c.tarotEndMode === 'threshold' ? 'seuil' : 'arrêt libre'}`
+    ? c.tarotEndMode === 'threshold'
+      ? `Donnes enchaînées · seuil ±${c.target}`
+      : 'Donnes enchaînées · on arrête quand on veut'
     : `Objectif ${c.target} · ${c.rounding === 'rounded' ? 'arrondi à la dizaine' : 'points réels'}`
 })
 const gameTitle = computed(() =>
@@ -317,7 +319,7 @@ async function closeRoom(): Promise<void> {
         </fieldset>
         <label v-if="!tarot" class="flex items-center gap-2">
           <input v-model="form.callsEnabled" type="checkbox" />
-          <span>Appels de couleur · double-tap</span>
+          <span>Annoncer une couleur en jeu (deux tapes)</span>
         </label>
         <div v-if="view.config.game === 'coinche'">
           <label class="label flex items-center justify-between" for="bot-difficulty">
@@ -340,22 +342,27 @@ async function closeRoom(): Promise<void> {
           <label v-if="tarot" class="label">
             Fin de partie
             <select v-model="form.tarotEndMode" class="input">
-              <option value="free">Arrêt libre</option>
-              <option value="threshold">Seuil positif ou négatif</option>
+              <option value="free">On enchaîne les donnes</option>
+              <option value="threshold">Signaler un seuil, sans couper la table</option>
             </select>
           </label>
-          <label class="label" for="target">Objectif (points)</label>
-          <input
-            id="target"
-            v-model.number="form.target"
-            class="input"
-            type="number"
-            inputmode="numeric"
-            min="100"
-            max="20000"
-            step="10"
-          />
-          <p v-if="!targetOk" class="err mt-1">Entre 100 et 20 000, multiple de 10.</p>
+          <p v-if="tarot" class="muted text-sm">
+            Chaque donne se termine par un score, puis la suivante. La partie ne s’arrête que si l’hôte la termine.
+          </p>
+          <template v-if="!tarot || form.tarotEndMode === 'threshold'">
+            <label class="label" for="target">{{ tarot ? 'Seuil (+/−)' : 'Objectif (points)' }}</label>
+            <input
+              id="target"
+              v-model.number="form.target"
+              class="input"
+              type="number"
+              inputmode="numeric"
+              min="100"
+              max="20000"
+              step="10"
+            />
+            <p v-if="!targetOk" class="err mt-1">Entre 100 et 20 000, multiple de 10.</p>
+          </template>
         </div>
         <div>
           <label class="label" for="dealer">Premier donneur</label>
@@ -386,8 +393,16 @@ async function closeRoom(): Promise<void> {
             ['Très prudent', 'Prudent', 'Équilibré', 'Offensif', 'Très offensif'][(view.config.botDifficulty ?? 2) - 1]
           }}
         </dd>
-        <dt class="muted">Objectif</dt>
-        <dd>{{ view.config.target }}</dd>
+        <dt class="muted">{{ tarot ? 'Fin' : 'Objectif' }}</dt>
+        <dd>
+          {{
+            tarot
+              ? view.config.tarotEndMode === 'threshold'
+                ? `Donnes enchaînées, seuil ±${view.config.target}`
+                : 'Donnes enchaînées'
+              : view.config.target
+          }}
+        </dd>
         <dt class="muted">Premier donneur</dt>
         <dd>
           {{ view.config.firstDealer === 'random' ? 'Tirage au sort' : `Place ${Number(view.config.firstDealer) + 1}` }}

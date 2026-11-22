@@ -66,7 +66,7 @@ const isChelem = (t: TarotBonusType) => t === 'petitChelem' || t === 'grandChele
   </div>
   <SegmentedChoice
     v-model="f.success"
-    label="Contrat"
+    label="Résultat"
     :options="[
       { value: 'success', label: 'Réussi' },
       { value: 'fail', label: 'Chuté' },
@@ -74,9 +74,9 @@ const isChelem = (t: TarotBonusType) => t === 'petitChelem' || t === 'grandChele
   />
   <p class="muted">Un écart nul est toujours réussi. La réussite se juge sur l’écart exact, avant arrondi.</p>
 
-  <details class="rounded-xl border-2 border-slate-300 p-3">
-    <summary class="cursor-pointer font-bold">Aide : calculer l’écart avec les points</summary>
-    <div class="mt-2 flex flex-col gap-2">
+  <section class="flex flex-col gap-2 rounded-xl border-2 border-slate-300 p-3">
+    <h3 class="font-bold">Calculer l’écart avec les points et les bouts</h3>
+    <div class="flex flex-col gap-2">
       <SegmentedChoice
         v-model="bouts"
         label="Nombre de bouts du preneur"
@@ -86,7 +86,7 @@ const isChelem = (t: TarotBonusType) => t === 'petitChelem' || t === 'grandChele
       <input id="hp" v-model="helperPts" class="input" inputmode="decimal" />
       <button type="button" class="btn" @click="applyHelper">Calculer l’écart</button>
     </div>
-  </details>
+  </section>
 
   <section aria-labelledby="bon-h" class="flex flex-col gap-2">
     <h3 id="bon-h" class="text-lg font-bold">Primes individuelles</h3>

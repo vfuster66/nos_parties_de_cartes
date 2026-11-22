@@ -435,7 +435,7 @@ const pct = (t: 0 | 1) => Math.min(100, Math.max(0, Math.round((v.value.totals[t
         ▶ Jouable · ✓ sélectionnée · × indisponible
       </p>
       <p v-if="canCallSuit" class="px-3 text-xs font-semibold text-teal-800" aria-label="Appel de couleur">
-        ⚡ Double-tap : appeler la couleur
+        Deux tapes sur une carte : demander cette couleur au partenaire.
       </p>
       <HandFan :items="handItems" label="Cartes de votre main" @tap="tapKey" />
       <p v-if="hint" class="note mx-2 mb-2" role="status">{{ hint }}</p>

@@ -35,6 +35,9 @@ export function createApp(opts: AppOptions) {
   })
 
   const http = createServer((req, res) => {
+    res.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'")
+    res.setHeader('x-content-type-options', 'nosniff')
+    res.setHeader('referrer-policy', 'no-referrer')
     if (req.method === 'GET' && req.url === '/healthz') {
       let ok: boolean
       try {
@@ -42,7 +45,13 @@ export function createApp(opts: AppOptions) {
       } catch {
         ok = false
       }
-      res.writeHead(ok ? 200 : 503, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+      res.writeHead(ok ? 200 : 503, {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+      })
       res.end(JSON.stringify({ status: ok ? 'ok' : 'degraded' }))
       return
     }

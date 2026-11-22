@@ -1,6 +1,7 @@
 // Stockage local du jeu en ligne (appareil seulement). Séparé d'IndexedDB et de l'export du compteur :
 // les jetons de reconnexion n'apparaissent donc jamais dans un fichier d'export partageable.
 import type { Seat, TeamIdx } from '../../shared/coinche/cards'
+import type { OnlineGame } from '../../shared/coinche/types'
 
 const SESSIONS = 'ncp.online.sessions.v1'
 const RESULTS = 'ncp.online.results.v1'
@@ -24,6 +25,10 @@ interface OnlineResultBase {
   endedAt: number
   players: { nickname: string; seat: Seat }[]
   rounds: number
+  /** Formule du salon, pour retrouver coinche, belote ou tarot au compteur. */
+  formula?: OnlineGame
+  /** Partie du compteur créée à partir de ce résultat. */
+  linkedGameId?: string
 }
 
 export type OnlineResult = OnlineResultBase &
@@ -68,8 +73,17 @@ export function forgetSession(roomId: string): void {
 export const loadResults = (): OnlineResult[] => read<OnlineResult[]>(RESULTS, [])
 /** Ajoute ou met à jour (par identifiant de partie) : jamais de doublon. */
 export function saveResult(r: OnlineResult): void {
+  const previous = loadResults().find((x) => x.roomId === r.roomId)
+  const next = previous?.linkedGameId ? { ...r, linkedGameId: previous.linkedGameId } : r
   const list = loadResults().filter((x) => x.roomId !== r.roomId)
-  write(RESULTS, [r, ...list].slice(0, 200))
+  write(RESULTS, [next, ...list].slice(0, 200))
+}
+
+export function linkResult(roomId: string, gameId: string): void {
+  write(
+    RESULTS,
+    loadResults().map((r) => (r.roomId === roomId ? { ...r, linkedGameId: gameId } : r)),
+  )
 }
 
 export const lastNickname = (): string => read<string>(NICK, '')

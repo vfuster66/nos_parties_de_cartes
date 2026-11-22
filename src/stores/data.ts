@@ -4,7 +4,7 @@ import { applyMerge, buildBackup, defaultPreferences, planMerge, teamKey } from 
 import type { BackupData, MergePlan } from '../db/backup'
 import { computeGame, recomputeDealers } from '../engine/game'
 import type { Deal, Draft, Evening, Game, GameStatus, Player, Preferences, Team } from '../engine/model'
-import { GAME_LABELS } from '../engine/types'
+import { defaultRules, GAME_LABELS } from '../engine/types'
 import type { GameKind, Rules } from '../engine/types'
 import { teamLabel } from '../engine/stats'
 
@@ -87,7 +87,18 @@ export const useData = defineStore('data', {
         this.players = players
         this.teams = teams
         this.evenings = evenings
-        this.games = games
+        const readable = games.filter(
+          (g) =>
+            !!g &&
+            typeof g.id === 'string' &&
+            (g.kind === 'coinche' || g.kind === 'belote' || g.kind === 'tarot') &&
+            Array.isArray(g.playerIds) &&
+            Array.isArray(g.deals) &&
+            !!g.rules,
+        )
+        if (readable.length !== games.length)
+          this.loadError = `${games.length - readable.length} partie(s) illisible(s) ont été laissées de côté. Les autres restent disponibles.`
+        this.games = readable
         this.drafts = drafts
         const pref = meta.find((m) => m.key === 'preferences')
         if (pref) this.preferences = pref.value
@@ -232,6 +243,40 @@ export const useData = defineStore('data', {
       await this.guard(() => idb.put('games', g))
       this.games.push(g)
       return g
+    },
+    /** Ramène le score d'une table en ligne dans le compteur, sans inventer les donnes. */
+    async adoptOnlineResult(input: {
+      name: string
+      kind: GameKind
+      announcements: boolean
+      status: 'finished' | 'abandoned'
+      endedAt: number
+      rounds: number
+      roomId: string
+      totals: number[]
+      playerIds: string[]
+      teamNames?: [string, string]
+    }): Promise<Game> {
+      const rules = defaultRules(input.kind)
+      if (rules.kind === 'belote') rules.announcements = input.announcements
+      const g = await this.createGame({
+        kind: input.kind,
+        name: input.name,
+        eveningId: null,
+        teamA: input.kind === 'tarot' ? undefined : [input.playerIds[0], input.playerIds[2]],
+        teamB: input.kind === 'tarot' ? undefined : [input.playerIds[1], input.playerIds[3]],
+        teamNames: input.teamNames,
+        tarotPlayers: input.kind === 'tarot' ? input.playerIds : undefined,
+        firstDealerId: input.playerIds[0],
+        rules,
+      })
+      await this.updateGame(g.id, (game) => ({
+        ...game,
+        status: input.status,
+        endedAt: new Date(input.endedAt).toISOString(),
+        online: { roomId: input.roomId, rounds: input.rounds, totals: input.totals },
+      }))
+      return this.games.find((x) => x.id === g.id) ?? g
     },
     async updateGame(id: string, patch: (g: Game) => Game, undoLabel?: string) {
       const idx = this.games.findIndex((g) => g.id === id)

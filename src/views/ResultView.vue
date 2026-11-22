@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
-import { computeGame, computeResult, entityPlayerIds } from '../engine/game'
+import { computeGame, computeResult, entityPlayerIds, scoreTotals } from '../engine/game'
 import { gameTitle } from '../engine/model'
 import { useData } from '../stores/data'
 
@@ -10,7 +10,9 @@ const props = defineProps<{ id: string }>()
 const data = useData()
 const game = computed(() => data.game(props.id))
 const state = computed(() => (game.value ? computeGame(game.value) : null))
-const result = computed(() => (game.value && state.value ? computeResult(game.value, state.value.totals) : null))
+const result = computed(() =>
+  game.value && state.value ? computeResult(game.value, scoreTotals(game.value, state.value)) : null,
+)
 const label = (i: number) => {
   const g = game.value!
   return g.kind === 'tarot'

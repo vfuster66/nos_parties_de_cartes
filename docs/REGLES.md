@@ -38,5 +38,5 @@ Annonces : tierce 20, cinquante 50, cent 100, carré de 7/8 0, carré de 9 150, 
 - À 6 inscrits : 5 actifs, le donneur est au repos (0 point, ni preneur, ni appelé, ni bénéficiaire) et le donneur tourne à chaque donne.
 - **Primes** individuelles, traitées après et séparément du contrat, conservées même si le contrat chute : le bénéficiaire reçoit `valeur × (actifs − 1)`, chaque autre actif paie `valeur`. Valeurs par défaut : petit au bout 10, poignées 10/20/30, blancs 10, petit chelem annoncé 10, grand chelem annoncé 20.
 - Chelems annoncés : petit réussi si le camp concède au plus 3 plis (réglable), grand si 0 pli ; en cas d'échec les transferts sont inversés. Pas de prime pour un chelem non annoncé.
-- Fin : arrêt libre, ou quand un joueur atteint ±seuil (1 000 par défaut) à la fin d'une donne. Premiers ex æquo = tous vainqueurs.
+- Fin : arrêt libre, ou signal quand un joueur atteint ±seuil (1 000 par défaut) à la fin d'une donne. Au compteur, le seuil propose d'arrêter ; une donne de plus reste possible tant que la partie n'est pas clôturée. En ligne, la donne suivante reste proposée et l'hôte termine la partie. Premiers ex æquo = tous vainqueurs.
 - Invariants testés : somme des variations = 0, donneur au repos = 0, chaque prime à somme nulle.

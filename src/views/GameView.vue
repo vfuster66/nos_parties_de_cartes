@@ -4,7 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import ErrorList from '../components/ErrorList.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { askConfirm } from '../confirm'
-import { computeGame, entityPlayerIds } from '../engine/game'
+import { computeGame, entityPlayerIds, scoreTotals } from '../engine/game'
 import { describeDeal } from '../engine/describe'
 import { gameTitle } from '../engine/model'
 import { outcomeLabel, signed } from '../labels'
@@ -16,14 +16,17 @@ const data = useData()
 const router = useRouter()
 const game = computed(() => data.game(props.id))
 const state = computed(() => (game.value ? computeGame(game.value) : null))
+const totals = computed(() => (game.value && state.value ? scoreTotals(game.value, state.value) : []))
 const actionError = ref('')
+const renaming = ref(false)
+const nameDraft = ref('')
 const names = computed(() => ({
   player: (id: string) => data.playerName(id),
   team: (i: 0 | 1) => data.gameTeamName(game.value!, i),
 }))
 const entities = computed(() => {
   const g = game.value!
-  return state.value!.totals.map((total, i) => ({
+  return totals.value.map((total, i) => ({
     total,
     title: g.kind === 'tarot' ? data.playerName(g.playerIds[i]) : data.gameTeamName(g, i as 0 | 1),
     members:
@@ -76,6 +79,14 @@ async function pass() {
   )
 }
 async function finish() {
+  if (
+    !(await askConfirm({
+      title: 'Terminer la partie ?',
+      message: 'Les donnes s’arrêtent. Vous pourrez rouvrir la partie ensuite pour en ajouter.',
+      confirmLabel: 'Terminer',
+    }))
+  )
+    return
   await run(async () => {
     await data.setStatus(props.id, 'finished')
     await router.push(`/partie/${props.id}/resultat`)
@@ -130,9 +141,13 @@ async function recompute() {
   )
     await run(() => data.recomputeDealers(props.id))
 }
-async function rename() {
-  const n = window.prompt('Nom de la partie (laisser vide pour le nom automatique)', game.value!.name ?? '')
-  if (n !== null) await run(() => data.renameGame(props.id, n))
+function startRename() {
+  nameDraft.value = game.value?.name ?? ''
+  renaming.value = true
+}
+async function saveRename() {
+  await run(() => data.renameGame(props.id, nameDraft.value))
+  renaming.value = false
 }
 const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
 </script>
@@ -148,16 +163,30 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
         {{ game.status === 'in_progress' ? 'En cours' : game.status === 'finished' ? 'Terminée' : 'Abandonnée' }}
         <template v-if="game.rules.kind !== 'tarot'">
           · objectif {{ game.rules.target }} ·
-          {{ game.rules.rounding === 'rounded' ? 'arrondi' : 'points réels' }}</template
+          {{ game.rules.rounding === 'rounded' ? 'arrondi à la dizaine' : 'points réels' }}</template
         >
         <template v-else>
           · {{ game.rules.endMode === 'free' ? 'arrêt libre' : `fin à ±${game.rules.threshold}` }}</template
         >
-        <button class="ml-2 inline-flex min-h-11 items-center px-1 font-semibold underline" @click="rename">
+        <button
+          v-if="!renaming"
+          class="ml-2 inline-flex min-h-11 items-center px-1 font-semibold underline"
+          @click="startRename"
+        >
           Renommer
         </button>
       </p>
+      <form v-if="renaming" class="mt-2 flex flex-wrap gap-2" @submit.prevent="saveRename">
+        <label class="sr-only" for="game-name">Nom de la partie</label>
+        <input id="game-name" v-model="nameDraft" class="input min-w-40 flex-1" placeholder="Nom automatique si vide" />
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+        <button class="btn" type="button" @click="renaming = false">Annuler</button>
+      </form>
     </PageHeader>
+    <p v-if="game.online && state.rows.length === 0" class="note mb-3">
+      Score ramené d’une table en ligne ({{ game.online.rounds }} donne{{ game.online.rounds > 1 ? 's' : '' }}). Le
+      détail de chaque donne n’est pas repris.
+    </p>
 
     <section aria-label="Scores" class="mb-3 grid gap-2" :class="game.kind === 'tarot' ? 'grid-cols-1' : 'grid-cols-2'">
       <div
@@ -217,10 +246,10 @@ const gapInfo = (d: number[]) => d.map((v, i) => ({ v, i }))
         <div class="grid grid-cols-2 gap-2">
           <button class="btn" @click="pass">⏭ Donne passée</button>
           <button class="btn" :disabled="!undo" @click="run(() => data.undo(id))">
-            ↩ Annuler : {{ undo?.label ?? 'rien' }}
+            ↩ {{ undo ? `Annuler : ${undo.label}` : 'Annuler' }}
           </button>
         </div>
-        <button v-if="canFinish" class="btn btn-primary" @click="finish">🏁 Terminer la partie</button>
+        <button v-if="canFinish" class="btn" @click="finish">Terminer la partie</button>
       </template>
       <template v-else>
         <RouterLink v-if="game.status === 'finished'" :to="`/partie/${id}/resultat`" class="btn btn-primary"

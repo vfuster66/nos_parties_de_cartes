@@ -34,6 +34,11 @@ body {
 * {
   min-width: 0;
 }
+/* Les boutons gardent leur libellé entier : le groupe passe à la ligne plutôt que le texte ne se chevauche. */
+button,
+.btn {
+  min-width: min-content;
+}
 
 @layer components {
   .btn {

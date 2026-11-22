@@ -37,9 +37,9 @@ export interface TarotFormBonus {
 }
 export interface TarotForm {
   takerId: string
-  contract: TarotContract
+  contract: TarotContract | ''
   gap: string
-  success: 'success' | 'fail'
+  success: 'success' | 'fail' | ''
   /** À cinq actifs. */
   callMode: 'partner' | 'self_call' | 'king_in_dog'
   calledId: string
@@ -54,14 +54,14 @@ export function emptyForm(kind: Game['kind']): DealForm {
     return {
       ...base(),
       contractMode: 'num',
-      contract: '80',
+      contract: '',
       level: 'none',
       coincheTeam: '',
       coincherId: '',
       allTricks: false,
     }
   if (kind === 'belote') return { ...base(), capot: 'none', announcements: [{}, {}], strongest: '' }
-  return { takerId: '', contract: 'garde', gap: '', success: 'success', callMode: 'partner', calledId: '', bonuses: [] }
+  return { takerId: '', contract: '', gap: '', success: '', callMode: 'partner', calledId: '', bonuses: [] }
 }
 
 /** Nombre décimal saisi avec virgule ou point ; chaîne vide ou invalide → NaN. */
@@ -94,7 +94,8 @@ export function coincheFromForm(g: Game, f: CoincheForm): Parsed<CoincheInput> {
   if (!f.trump) errors.push('Choisissez la couleur d’atout.')
   const team = teamOfPlayer(g, f.takerId)
   const contract = f.contractMode === 'capot' ? 'capot' : parseNum(f.contract)
-  if (contract !== 'capot' && !Number.isFinite(contract)) errors.push('Saisissez un contrat numérique valide.')
+  if (contract !== 'capot' && !f.contract.trim()) errors.push('Choisissez le contrat.')
+  else if (contract !== 'capot' && !Number.isFinite(contract)) errors.push('Saisissez un contrat numérique valide.')
   const takerPoints = parsePoints(f, f.allTricks, errors)
   if (f.allTricks && f.contractMode === 'capot') {
     /* capot annoncé réalisé */
@@ -146,12 +147,15 @@ export function tarotFromForm(f: TarotForm, active: number): Parsed<TarotInput> 
   const gap = parseNum(f.gap)
   if (!Number.isFinite(gap) || gap < 0) errors.push('Saisissez l’écart exact (nombre positif ou nul, par pas de 0,5).')
   else if (!Number.isInteger(gap * 2)) errors.push('L’écart se saisit par pas de 0,5.')
+  if (!f.contract) errors.push('Choisissez le contrat.')
   if (!f.takerId) errors.push('Choisissez le joueur preneur.')
+  if (f.success !== 'success' && f.success !== 'fail' && gap !== 0)
+    errors.push('Indiquez si le contrat est réussi ou chuté.')
   if (active === 5 && f.callMode === 'partner' && !f.calledId) errors.push('Choisissez le joueur appelé.')
   if (errors.length) return { errors }
   const input: TarotInput = {
     takerId: f.takerId,
-    contract: f.contract,
+    contract: f.contract as TarotContract,
     gap,
     success: gap === 0 ? true : f.success === 'success',
     calledId: active === 5 && f.callMode === 'partner' ? f.calledId : null,

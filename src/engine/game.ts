@@ -115,11 +115,19 @@ export function computeGame(g: Game): GameState {
   }
 }
 
+/** Totaux affichés : ceux des donnes, ou le score ramené d'une table en ligne. */
+export function scoreTotals(g: Game, state = computeGame(g)): number[] {
+  if (g.online && state.rows.length === 0 && g.online.totals.length === state.totals.length) return g.online.totals
+  return state.totals
+}
+
 /** Condition de fin, évaluée à la fin de la donne. */
 export function isEndReached(g: Game, totals: number[], reserve: ReserveItem[]): boolean {
   if (!g.deals.length) return false
   const r = g.rules
-  if (r.kind === 'tarot') return r.endMode === 'threshold' && totals.some((t) => Math.abs(t) >= r.threshold)
+  if (r.kind === 'tarot')
+    return r.endMode === 'threshold' && r.threshold > 0 && totals.some((t) => Math.abs(t) >= r.threshold)
+  if (!(r.target > 0)) return false
   if (reserve.length) return false // litige non résolu : on poursuit
   const reached = totals.filter((t) => t >= r.target)
   if (!reached.length) return false

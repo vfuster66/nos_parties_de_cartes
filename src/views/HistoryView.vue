@@ -11,6 +11,11 @@ const eveningId = ref('')
 const playerId = ref('')
 const teamId = ref('')
 const status = ref('')
+function teamOption(t: (typeof data.teams)[number]): string {
+  const members = t.memberIds.map((id) => data.playerName(id)).join(' & ')
+  const name = data.teamName(t.id)
+  return name === members ? name : `${name} · ${members}`
+}
 const list = computed(() =>
   [...data.games]
     .filter((g) => (!kind.value || g.kind === kind.value) && (!status.value || g.status === status.value))
@@ -61,7 +66,7 @@ const list = computed(() =>
       <label class="label" for="f-te">Équipe</label>
       <select id="f-te" v-model="teamId" class="input">
         <option value="">Toutes</option>
-        <option v-for="t in data.teams" :key="t.id" :value="t.id">{{ data.teamName(t.id) }}</option>
+        <option v-for="t in data.teams" :key="t.id" :value="t.id">{{ teamOption(t) }}</option>
       </select>
     </div>
   </div>

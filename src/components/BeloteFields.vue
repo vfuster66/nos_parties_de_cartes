@@ -34,6 +34,10 @@ function bump(team: 0 | 1, t: AnnounceType, d: number) {
       />
       <section v-if="withAnnouncements" class="flex flex-col gap-3" aria-labelledby="ann-h">
         <h3 id="ann-h" class="text-lg font-bold">Annonces</h3>
+        <p class="muted">
+          Le carré de 7 ou de 8 vaut 0 : il ne marque rien, il peut seulement gagner le départage. Si les deux équipes
+          annoncent, indiquez la plus forte.
+        </p>
         <fieldset v-for="team in [0, 1] as const" :key="team" class="rounded-xl border-2 border-slate-300 p-3">
           <legend class="px-1 font-bold">{{ tn(team) }}</legend>
           <div v-for="t in ANNOUNCE_TYPES" :key="t" class="flex items-center justify-between gap-2 py-1">

@@ -13,6 +13,11 @@ const ta = computed(() => props.row.tarotDetail)
 const outcome = { success: 'Réussite', fail: 'Chute', litige: 'Litige', capot: 'Capot' }
 const teamTitle = (i: number) => data.gameTeamName(props.game, i as 0 | 1)
 const isBelote = computed(() => props.game.kind === 'belote')
+const tarotContract = computed(() => {
+  const input = props.row.deal.input
+  if (props.game.kind !== 'tarot' || !input || !('gap' in input)) return ''
+  return TAROT_CONTRACT_LABELS[input.contract]
+})
 function rowsOf(d: NonNullable<typeof t.value>) {
   const rows: { label: string; values: (string | number)[]; strong?: boolean }[] = [
     { label: 'Plis exacts', values: d.teams.map((x) => (d.outcome === 'capot' && isBelote.value ? '—' : x.exactPlis)) },
@@ -59,7 +64,7 @@ function rowsOf(d: NonNullable<typeof t.value>) {
     <template v-if="ta">
       <p class="text-lg">
         <strong>Issue : {{ ta.outcome === 'success' ? 'Réussite' : 'Chute' }}</strong> ·
-        {{ TAROT_CONTRACT_LABELS[(row.deal.input as any).contract as keyof typeof TAROT_CONTRACT_LABELS] }}
+        {{ tarotContract }}
       </p>
       <ul class="list-disc pl-5">
         <li>Écart exact : {{ ta.gap }} → arrondi : {{ ta.roundedGap }}</li>

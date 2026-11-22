@@ -52,8 +52,14 @@ async function onFile(e: Event) {
   importMsg.value = ''
   incoming.value = null
   plan.value = null
-  const f = (e.target as HTMLInputElement).files?.[0]
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  input.value = ''
   if (!f) return
+  if (f.size > 5_000_000) {
+    importErrors.value = ['Ce fichier dépasse 5 Mo.']
+    return
+  }
   try {
     const text = await f.text()
     let raw: unknown
